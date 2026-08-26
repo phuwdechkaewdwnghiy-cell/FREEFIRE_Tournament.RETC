@@ -1,0 +1,3228 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="doc-title">FREE FIRE BR TOURNAMENT LEADERBOARD</title>
+
+    <!-- Google Fonts & FontAwesome -->
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- External Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #0a0b0e;
+            --bg-card: #12141c;
+            --bg-table: #181a24;
+            --bg-hover: #222534;
+            --accent-gold: #ffb703;
+            --accent-gold-glow: rgba(255, 183, 3, 0.4);
+            --place-color: #38bdf8;
+            --kill-color: #f87171;
+            --total-color: #4ade80;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --border-color: #2a2e3d;
+            
+            --btn-confirm: #16a34a;
+            --btn-confirm-hover: #15803d;
+            --btn-edit: #f97316;
+            --btn-edit-hover: #ea580c;
+            --btn-reset: #dc2626;
+            --btn-reset-hover: #b91c1c;
+
+            --error-border: #ef4444;
+            --error-glow: rgba(239, 68, 68, 0.5);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Kanit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: linear-gradient(180deg, rgba(6, 7, 10, 0.90) 0%, rgba(6, 7, 10, 0.94) 100%);
+            color: var(--text-main);
+            padding: 20px;
+            min-height: 100vh;
+            /* [v5.0] กัน scrollbar แนวนอนที่อาจเกิดจากแบนเนอร์/นาวบาร์แบบเต็มจอ (100vw) ด้านล่าง */
+            overflow-x: hidden;
+        }
+
+        /* ===================================================================
+           [v5.0] TOP NAV BAR — แถบเมนูด้านบนสุด สไตล์อ้างอิงเมนูเกม Free Fire
+           =================================================================== */
+        .top-nav {
+            /* [v6.0] เดิมยาวเต็มจอ (100vw) ทำให้ดูเป็นแท่งยาวเกินไป ปรับเป็นแคปซูลสั้นๆ กึ่งกลางจอแทน */
+            position: sticky; top: 12px;
+            z-index: 999;
+            width: fit-content;
+            max-width: calc(100vw - 40px);
+            margin: 0 auto 20px auto;
+            background: #0a0b0e;
+            border: 1px solid var(--border-color);
+            border-radius: 40px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        }
+        .top-nav-inner {
+            max-width: none; margin: 0; padding: 10px 22px;
+            display: flex; align-items: center; justify-content: center; gap: 22px; flex-wrap: nowrap;
+        }
+        .top-nav-logo { font-weight: 900; font-size: 1rem; letter-spacing: 0.5px; color: #fff; }
+        .top-nav-logo span { color: var(--accent-gold); }
+        .top-nav-menu { display: flex; align-items: center; gap: 28px; }
+        .nav-item { position: relative; }
+        .nav-item > span {
+            cursor: pointer; color: #e5e7eb; font-size: 0.9rem; font-weight: 500;
+            display: inline-flex; align-items: center; gap: 6px; transition: color 0.2s ease;
+        }
+        .nav-item > span:hover { color: var(--accent-gold); }
+        .nav-dropdown-menu {
+            position: absolute; top: 100%; left: 0; margin-top: 10px;
+            background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px;
+            min-width: 160px; padding: 6px; opacity: 0; visibility: hidden; transform: translateY(-6px);
+            transition: all 0.2s ease; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .nav-dropdown:hover .nav-dropdown-menu,
+        .nav-dropdown.is-open .nav-dropdown-menu { opacity: 1; visibility: visible; transform: translateY(0); }
+        .nav-dropdown-menu a {
+            display: block; padding: 8px 12px; border-radius: 6px; color: #e5e7eb;
+            font-size: 0.85rem; text-decoration: none; cursor: pointer;
+        }
+        .nav-dropdown-menu a:hover { background: rgba(255,183,3,0.1); color: var(--accent-gold); }
+
+        /* ===================================================================
+           [v5.0] HERO BANNER
+           แบนเนอร์หัวเว็บสไตล์ทัวร์นาเมนต์ Esports — ออกแบบต้นฉบับ ไม่ได้ก็อปปี้โลโก้/ดีไซน์ทางการ
+           ของ Garena มาโดยตรง (สงวนลิขสิทธิ์โดย Garena/111dots Studio)
+           ===================================================================
+           [v5.0] แก้บั๊กระยะซ้าย-ขวาไม่เท่ากัน: เปลี่ยนมาใช้เทคนิค left:50%+margin-left:-50vw แทนการเดา
+           margin ให้เท่ากับ padding ของ body (แบบเดิมพังง่ายถ้า padding เปลี่ยนค่าทีหลัง) วิธีนี้กึ่งกลาง
+           แน่นอนเสมอไม่ว่า body จะมี padding เท่าไหร่ */
+        .hero-banner {
+            position: relative;
+            left: 50%; right: 50%;
+            margin-left: -50vw; margin-right: -50vw;
+            width: 100vw;
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+            margin-bottom: 24px;
+            /* [ตัวแปรรูปพื้นหลัง] เปลี่ยนลิงก์ในบรรทัด url(...) ด้านล่างนี้บรรทัดเดียวเพื่อเปลี่ยนภาพพื้นหลังหัวเว็บ */
+            background-image:
+                linear-gradient(180deg, rgba(8, 9, 13, 0.55) 0%, rgba(8, 9, 13, 0.8) 65%, var(--bg-dark) 100%),
+                url('https://images.wallpapersden.com/image/download/garena-free-fire-max-2023_bmZpaW2UmZqaraWkpJRmbmdlrWZlbWU.jpg');
+            background-size: cover;
+            background-position: center;
+            overflow: hidden;
+        }
+        .hero-content {
+            position: relative; z-index: 2;
+            padding: 40px 20px; max-width: 900px;
+            margin: 0 auto; /* [v5.0] กึ่งกลางตามที่ขอ (นอกเหนือจาก flex centering ของ .hero-banner ที่มีอยู่แล้ว) */
+        }
+        .hero-date-badge {
+            display: inline-block; background: rgba(255, 183, 3, 0.15); border: 1px solid var(--accent-gold);
+            color: var(--accent-gold); padding: 4px 18px; border-radius: 20px; font-size: 0.8rem;
+            font-weight: 700; letter-spacing: 1px; margin-bottom: 16px;
+        }
+        .hero-title {
+            font-size: clamp(1.8rem, 5vw, 3.2rem); font-weight: 900; text-transform: uppercase;
+            letter-spacing: 1px; margin-bottom: 14px; text-shadow: 0 0 25px rgba(255, 183, 3, 0.4);
+            line-height: 1.15;
+        }
+        .hero-title span { color: var(--accent-gold); }
+        .hero-tagline { color: #d1d5db; font-size: 1rem; margin-bottom: 20px; }
+
+        /* [v5.0] สรุปเงินรางวัลในแบนเนอร์ (แทนที่ Widget ลอยมุมขวาล่างที่เอาออกไปแล้ว) */
+        .hero-prize-summary {
+            display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 14px;
+        }
+        .prize-chip {
+            display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border-color); border-radius: 10px; padding: 8px 14px; font-size: 0.85rem;
+        }
+        .prize-chip span { color: #d1d5db; }
+        .prize-chip b { color: var(--accent-gold); }
+        .prize-chip.gold { border-color: var(--accent-gold); background: rgba(255,183,3,0.08); }
+        .prize-chip.silver { border-color: #c7ccd6; }
+        .prize-chip.bronze { border-color: #cd7f32; }
+        .hero-entry-fee { color: var(--text-muted); font-size: 0.9rem; }
+        .hero-entry-fee b { color: #fff; }
+
+        /* ===================================================================
+           [v5.0] MAP GALLERY MODAL (แอดมินเพิ่ม/ลบรูปแผนที่ได้เองผ่านหน้าเว็บ ไม่ต้องแก้โค้ด)
+           =================================================================== */
+        .map-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+        .map-gallery-item { position: relative; border-radius: 10px; overflow: hidden; border: 1px solid var(--border-color); }
+        .map-gallery-item img { width: 100%; height: 110px; object-fit: cover; display: block; }
+        .map-gallery-item .map-del-btn {
+            position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%;
+            background: var(--error-border); color: #fff; border: none; font-size: 0.65rem; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        /* ===================================================================
+           [v4.0 UI Refresh] ACCORDION แถวขยายรายชื่อผู้เล่นในตารางหลัก
+           =================================================================== */
+        .team-name-toggle {
+            cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+            transition: color 0.2s ease; user-select: none;
+        }
+        .team-name-toggle.admin-toggle { color: var(--text-muted); font-size: 0.85rem; padding: 2px 6px; }
+        .team-name-link:hover, .team-name-toggle:hover { color: var(--accent-gold); }
+        .team-name-toggle:hover .accordion-chevron { color: var(--accent-gold); }
+        .accordion-chevron { font-size: 0.75rem; color: var(--text-muted); transition: transform 0.3s ease, color 0.2s ease; }
+        .team-name-toggle.is-open .accordion-chevron { transform: rotate(180deg); color: var(--accent-gold); }
+
+        /* [v6.0] แก้บั๊ก: ตัวเลือก ".team-expand-row td" แบบเดิมไม่มี ">" จึงกลายเป็นการเลือก td ทุกตัว
+           ที่ซ้อนอยู่ข้างในด้วย (รวมถึงแต่ละแถวผู้เล่นในตาราง mini-player-table) ทำให้ขึ้นเส้นสีทองใต้ผู้เล่น
+           ทุกคนโดยไม่ตั้งใจ ตอนนี้เอาเส้นออกทั้งหมดตามที่ขอ (ไม่มีเส้นขอบใต้ td ของแถว Accordion แล้ว) */
+        .team-expand-row > td { padding: 0 !important; border-bottom: none !important; }
+        .team-expand-content-wrap {
+            max-height: 0; overflow: hidden; transition: max-height 0.4s ease;
+        }
+        .team-expand-content {
+            padding: 16px 20px; background: rgba(255, 255, 255, 0.02);
+            border-top: 1px dashed var(--border-color);
+        }
+        .mini-player-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .mini-player-table th {
+            text-align: center; color: var(--text-muted); font-weight: 600; font-size: 0.75rem;
+            padding: 6px 4px; text-transform: uppercase;
+        }
+        .mini-player-table th:first-child { text-align: left; }
+        .mini-player-table td { text-align: center; padding: 4px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+        .mini-player-table tbody tr:last-child td { border-bottom: none; }
+        .pd-player-cell { display: flex; align-items: center; gap: 8px; text-align: left !important; }
+        .player-avatar-img, .player-avatar-placeholder {
+            width: 30px; height: 30px; border-radius: 50%; object-fit: cover; flex-shrink: 0;
+            border: 1px solid var(--border-color);
+        }
+        .player-avatar-placeholder {
+            display: flex; align-items: center; justify-content: center; background: var(--bg-table);
+            color: var(--text-muted); font-size: 0.75rem;
+        }
+        body:not(.viewer-mode) .player-avatar-img, body:not(.viewer-mode) .player-avatar-placeholder { cursor: pointer; }
+        .mini-player-table .player-name-input { width: 100px; }
+        .mini-player-table input { text-align: center; }
+
+        /* [v6.0] เครดิตผู้พัฒนา */
+        .dev-credit-footer {
+            text-align: center; font-size: 0.75rem; color: var(--text-muted);
+            padding: 24px 10px 16px; opacity: 0.7;
+        }
+        .dev-credit-footer a {
+            color: var(--text-muted); text-decoration: none;
+            border-bottom: 1px dotted var(--border-color); transition: color 0.2s ease, border-color 0.2s ease;
+        }
+        .dev-credit-footer a:hover { color: var(--accent-gold); border-bottom-color: var(--accent-gold); }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 25px;
+            background: linear-gradient(180deg, rgba(255,183,3,0.08) 0%, rgba(18,20,28,0) 100%);
+            padding: 25px 15px;
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            position: relative;
+        }
+
+        .tournament-logo-img {
+            max-height: 80px;
+            max-width: 200px;
+            object-fit: contain;
+            margin-bottom: 10px;
+        }
+
+        .tournament-logo {
+            font-size: 3rem;
+            color: var(--accent-gold);
+            text-shadow: 0 0 20px var(--accent-gold-glow);
+            margin-bottom: 5px;
+        }
+
+        header h1 {
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: var(--accent-gold);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 15px var(--accent-gold-glow);
+        }
+
+        .tournament-meta {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .header-subtitle {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+            font-weight: 600;
+            margin-top: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .match-select-wrapper {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: var(--bg-card);
+            padding: 2px 8px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .match-select-wrapper select {
+            background: transparent;
+            color: var(--accent-gold);
+            border: none;
+            font-weight: 800;
+            font-size: 0.9rem;
+            cursor: pointer;
+            outline: none;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .stat-icon {
+            font-size: 1.6rem;
+            color: var(--accent-gold);
+        }
+
+        .stat-info h4 {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .stat-info .stat-value {
+            font-size: 1.3rem;
+            font-weight: 800;
+        }
+
+        /* [Player Dashboard v1] ===================================================== */
+        .pd-section-title {
+            font-size: 1.1rem;
+            color: var(--accent-gold);
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pd-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* Desktop: 3 การ์ดต่อแถว */
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        @media (max-width: 900px) {
+            .pd-stats-grid { grid-template-columns: repeat(2, 1fr); } /* Tablet: 2 การ์ด */
+        }
+        @media (max-width: 560px) {
+            .pd-stats-grid { grid-template-columns: 1fr; } /* Mobile: 1 การ์ด */
+        }
+
+        .pd-mvp-card {
+            background: linear-gradient(135deg, rgba(255,183,3,0.12), var(--bg-card));
+            border: 1px solid var(--accent-gold);
+            border-radius: 12px;
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            box-shadow: 0 4px 16px rgba(255, 183, 3, 0.15);
+        }
+        .pd-mvp-icon { font-size: 2rem; color: var(--accent-gold); text-shadow: 0 0 12px var(--accent-gold-glow); }
+        .pd-mvp-info h4 { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px; }
+        .pd-mvp-name { font-size: 1.15rem; font-weight: 800; color: #fff; line-height: 1.3; }
+        .pd-mvp-detail { font-size: 0.85rem; color: var(--kill-color); font-weight: 700; }
+        .pd-mvp-prize { font-size: 0.78rem; color: var(--accent-gold); font-weight: 700; margin-top: 2px; }
+
+        /* Count-up / fade-in โดยไม่ใช้ library ภายนอก */
+        .pd-fade-update {
+            animation: pdFadeIn 0.4s ease;
+        }
+        @keyframes pdFadeIn {
+            from { opacity: 0.25; transform: translateY(-2px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .player-name-input {
+            width: 100px;
+            background: #0d0e12;
+            border: 1px solid var(--border-color);
+            color: #fff;
+            padding: 4px 6px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+        .pd-total-kill-cell { color: var(--kill-color); font-weight: 800; }
+        .pd-team-label { color: var(--text-muted); font-size: 0.8rem; }
+        /* [Player Dashboard v1] จบ ===================================================== */
+
+
+        /* Controls */
+        .controls-bar {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .search-box {
+            position: relative;
+            flex: 1;
+            min-width: 250px;
+            max-width: 400px;
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 10px 15px 10px 42px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 0.95rem;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+        }
+
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.82rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            background: var(--bg-hover);
+            border-color: var(--text-muted);
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .btn-gold { background: var(--accent-gold); color: #000; border: none; }
+        .btn-gold:hover { background: #ffa000; }
+
+        .btn-reset { background: var(--btn-reset); color: #fff; border: none; }
+        .btn-reset:hover { background: var(--btn-reset-hover); }
+
+        /* Table */
+        .table-wrapper {
+            background: var(--bg-table);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            text-align: center;
+            min-width: 1000px;
+        }
+
+        th, td {
+            padding: 10px 6px;
+            /* [v6.0] ปรับเส้นแบ่งระหว่างแถวให้อ่อนลงตามที่ขอ (จากเทาเข้ม #2a2e3d เป็นเส้นบางโปร่งแสงแทบมองไม่เห็น) */
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            font-size: 0.9rem;
+        }
+
+        th {
+            background: #11131a;
+            color: var(--text-muted);
+            font-weight: 700;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .sub-header th {
+            font-size: 0.7rem;
+            background: #151821;
+            padding: 6px 4px;
+        }
+
+        .freeze-col-1 {
+            position: sticky;
+            left: 0;
+            background: var(--bg-table);
+            z-index: 5;
+            width: 70px;
+        }
+
+        .freeze-col-2 {
+            position: sticky;
+            left: 70px;
+            background: var(--bg-table);
+            z-index: 5;
+            min-width: 220px;
+            text-align: left;
+            padding-left: 12px;
+            border-right: 2px solid var(--border-color);
+        }
+
+        th.freeze-col-1, th.freeze-col-2 {
+            z-index: 15;
+            background: #11131a;
+        }
+
+        tbody tr:hover { background-color: var(--bg-hover) !important; }
+        tbody tr:hover .freeze-col-1,
+        tbody tr:hover .freeze-col-2 { background-color: var(--bg-hover) !important; }
+
+        .team-cell {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .team-logo-img {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: #2a2e3d;
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .team-logo-placeholder {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #2a2e3d;
+            border: 1px dashed var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .rank-medal { font-size: 1.3rem; font-weight: 900; }
+        .rank-1 { color: #ffe600; text-shadow: 0 0 10px rgba(255,230,0,0.5); }
+        .rank-2 { color: #e2e8f0; text-shadow: 0 0 8px rgba(226,232,240,0.4); }
+        .rank-3 { color: #b45309; text-shadow: 0 0 8px rgba(180,83,9,0.4); }
+
+        /* [v5.0] เอาเส้นขอบ/พื้นหลังไฮไลท์แถวอันดับ 1-3 ออกแล้วตามที่ขอ (เหรียญ 🥇🥈🥉 ในคอลัมน์อันดับยังอยู่ตามเดิม) */
+
+        input[type="text"].team-name-input {
+            width: 100%;
+            background: transparent;
+            border: 1px solid transparent;
+            color: #fff;
+            padding: 4px 6px;
+            border-radius: 4px;
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+
+        .input-score {
+            width: 38px;
+            background: #0d0e12;
+            border: 1px solid var(--border-color);
+            color: #fff;
+            padding: 4px;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .input-score.place-input { border-color: rgba(56, 189, 248, 0.3); color: var(--place-color); }
+        .input-score.kill-input { border-color: rgba(248, 113, 113, 0.3); color: var(--kill-color); }
+
+        .input-score:disabled {
+            background: #181a22;
+            opacity: 0.6;
+            cursor: not-allowed;
+            border-color: transparent !important;
+        }
+
+        .input-score.input-error {
+            border-color: var(--error-border) !important;
+            box-shadow: 0 0 6px var(--error-glow) !important;
+            outline: none;
+        }
+
+        /* [Player Dashboard v1] ช่อง Kill ทีมที่คำนวณอัตโนมัติจาก Player - ใช้ opacity ต่างจาก disabled ปกตินิดหน่อยให้รู้ว่า "มีค่าจริง แค่ห้ามแก้ตรงนี้" */
+        .input-score.input-computed:disabled {
+            background: #14161f;
+            opacity: 0.85;
+            cursor: help;
+            border-color: rgba(248, 113, 113, 0.15) !important;
+        }
+
+        .val-place { color: var(--place-color); font-weight: 700; }
+        .val-kill { color: var(--kill-color); font-weight: 700; }
+        .val-total { color: var(--total-color); font-weight: 900; font-size: 1.1rem; }
+
+        .btn-del { background: transparent; border: none; color: #6b7280; cursor: pointer; transition: 0.2s; }
+        .btn-del:hover { color: #ef4444; }
+
+        tfoot tr td {
+            background: #11131a;
+            padding: 10px 4px;
+            border-top: 2px solid var(--border-color);
+        }
+
+        .btn-match-action {
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .btn-confirm { background: var(--btn-confirm); color: #fff; }
+        .btn-confirm:hover { background: var(--btn-confirm-hover); }
+
+        .btn-edit { background: var(--btn-edit); color: #fff; }
+        .btn-edit:hover { background: var(--btn-edit-hover); }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        }
+
+        .modal-header {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--accent-gold);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-body {
+            font-size: 0.9rem;
+            color: var(--text-main);
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 8px 12px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 0.9rem;
+        }
+
+        .drag-area {
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s ease;
+        }
+
+        .drag-area:hover, .drag-area.active {
+            border-color: var(--accent-gold);
+        }
+
+        #export-container {
+            position: absolute;
+            left: -9999px;
+            top: -9999px;
+            width: 1920px;
+            height: 1080px;
+            background: transparent;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+            box-sizing: border-box;
+        }
+
+        @media print {
+            .controls-bar, .stats-grid, tfoot, .btn-del, .match-select-wrapper { display: none !important; }
+            body { background: #fff; color: #000; padding: 0; }
+            .table-wrapper { border: none; box-shadow: none; }
+            th, td { border-bottom: 1px solid #ccc; color: #000 !important; }
+            .freeze-col-1, .freeze-col-2 { background: #fff !important; }
+            input { border: none !important; background: transparent !important; color: #000 !important; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ============== [v5.0] TOP NAV BAR ============== -->
+<nav class="top-nav">
+    <div class="top-nav-inner">
+        <div class="top-nav-logo">FF <span>LEAGUE</span></div>
+        <div class="top-nav-menu">
+            <div class="nav-item nav-dropdown" id="nav-gameplay">
+                <span>เกมเพลย์ <i class="fa-solid fa-chevron-down" style="font-size:0.65rem;"></i></span>
+                <div class="nav-dropdown-menu">
+                    <a data-action="open-map-modal">แผนที่</a>
+                </div>
+            </div>
+            <div class="nav-item">
+                <span data-action="open-news-modal">ข่าวสาร</span>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- ============== [v5.0] HERO BANNER ============== -->
+<header class="hero-banner">
+    <div class="hero-content">
+        <!-- [ตัวแปรวันที่แข่งขัน] แก้ช่วงวันที่ตรงนี้ได้เลยเวลากำหนดการเปลี่ยน -->
+        <div class="hero-date-badge"><i class="fa-solid fa-calendar-days"></i> แข่งขัน 3 วัน · 24, 26, 27 สิงหาคม 2569</div>
+        <h1 class="hero-title">FREE FIRE <span>BATTLE ROYALE</span></h1>
+        <!-- [ตัวแปรสโลแกน] -->
+        <p class="hero-tagline">สมรภูมิเดือดครั้งใหม่ การพิสูจน์ตัวเองครั้งยิ่งใหญ่ ที่ต้องก้าวข้ามทุกขีดจำกัดเพื่อเอาชนะ</p>
+
+        <!-- [ตัวแปรโครงสร้างเงินรางวัล] แก้ตัวเลข/ลำดับตรงนี้ได้เลยเวลาเงินรางวัลเปลี่ยน -->
+        <div class="hero-prize-summary">
+            <div class="prize-chip gold"><span>🥇 อันดับ 1</span><b>1,500 บาท</b></div>
+            <div class="prize-chip silver"><span>🥈 อันดับ 2</span><b>900 บาท</b></div>
+            <div class="prize-chip bronze"><span>🥉 อันดับ 3</span><b>600 บาท</b></div>
+            <div class="prize-chip"><span>อันดับ 4</span><b>200 บาท</b></div>
+            <div class="prize-chip"><span>💀 Man of the Match</span><b>150 บาท</b></div>
+        </div>
+        <!-- [ตัวแปรค่าสมัคร] -->
+        <p class="hero-entry-fee">ค่าสมัคร <b>200 บาท / ทีม</b></p>
+    </div>
+</header>
+
+<!-- ============== [v5.0] MAP GALLERY MODAL (Admin เพิ่ม/ลบรูปแผนที่เองได้ ไม่ต้องแก้โค้ด) ============== -->
+<div class="modal-overlay" id="map-modal">
+    <div class="modal-card" style="max-width: 640px;">
+        <div class="modal-header">
+            <span><i class="fa-solid fa-map-location-dot" style="color:var(--accent-gold);"></i> แผนที่การแข่งขัน</span>
+            <button class="btn-del" id="map-modal-close-btn"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <button id="map-add-btn" class="btn" style="display:none; margin-bottom:14px;">
+            <i class="fa-solid fa-plus"></i> เพิ่มรูปแผนที่
+        </button>
+        <div id="map-gallery" class="map-gallery"></div>
+        <p id="map-empty-msg" style="display:none; color:var(--text-muted); text-align:center; padding:20px 0;">
+            ยังไม่มีรูปแผนที่ — แอดมินสามารถกด "เพิ่มรูปแผนที่" ด้านบนได้เลย
+        </p>
+    </div>
+</div>
+<input type="file" id="input-file-map" accept="image/*" style="display:none;">
+
+<!-- ============== [v5.0] NEWS/ประกาศ MODAL (Admin แก้ข้อความเองได้ ไม่ต้องแก้โค้ด) ============== -->
+<div class="modal-overlay" id="news-modal">
+    <div class="modal-card" style="max-width: 560px;">
+        <div class="modal-header">
+            <span><i class="fa-solid fa-bullhorn" style="color:var(--accent-gold);"></i> ข่าวสาร / ประกาศ</span>
+            <button class="btn-del" id="news-modal-close-btn"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div id="news-view-mode">
+            <div id="news-content-display" style="white-space:pre-wrap; line-height:1.7; color:#e5e7eb; min-height:60px;"></div>
+            <button id="news-edit-btn" class="btn" style="display:none; margin-top:14px;">
+                <i class="fa-solid fa-pen"></i> แก้ไขข่าวสาร
+            </button>
+        </div>
+        <div id="news-edit-mode" style="display:none;">
+            <textarea id="news-textarea" rows="8" placeholder="พิมพ์ข่าวสาร/ประกาศตรงนี้..." style="width:100%; background:var(--bg-dark); border:1px solid var(--border-color); border-radius:8px; color:#fff; padding:10px; font-family:inherit; resize:vertical;"></textarea>
+            <div style="display:flex; gap:8px; margin-top:10px;">
+                <button id="news-save-btn" class="btn btn-gold" style="flex:1; justify-content:center;">บันทึก</button>
+                <button id="news-cancel-btn" class="btn" style="flex:1; justify-content:center;">ยกเลิก</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="container">
+    <header>
+        <div id="tournament-logo-container">
+            <div class="tournament-logo"><i class="fa-solid fa-trophy"></i></div>
+        </div>
+        <h1 id="header-tournament-name">Free Fire BR Tournament</h1>
+        <div class="tournament-meta" id="header-meta"></div>
+        <div class="header-subtitle">
+            LEADERBOARD
+            <!-- [Cloud v3.0] แสดงสถานะการเชื่อมต่อ Cloud แบบเรียลไทม์ -->
+            <span style="display:inline-flex; align-items:center; gap:6px; font-size:0.75rem; color: var(--text-muted); background: var(--bg-card); border: 1px solid var(--border-color); padding: 2px 10px; border-radius: 8px;">
+                <span id="cloud-status-dot" style="width:8px;height:8px;border-radius:50%;background:#eab308;display:inline-block;"></span>
+                <span id="cloud-status-text">กำลังเชื่อมต่อ...</span>
+            </span>
+            <!-- [v2.0 Dynamic Match] Dropdown ให้ผู้ใช้เลือกจำนวนเกมได้ 1-12 เกม แทนค่าคงที่ 6 เกมเดิม -->
+            <span class="match-select-wrapper" id="match-select-container">
+                <i class="fa-solid fa-gamepad" style="color: var(--accent-gold);"></i>
+                <select id="select-total-matches">
+                    <option value="1">1 MATCH</option>
+                    <option value="2">2 MATCHES</option>
+                    <option value="3">3 MATCHES</option>
+                    <option value="4">4 MATCHES</option>
+                    <option value="5">5 MATCHES</option>
+                    <option value="6" selected>6 MATCHES</option>
+                    <option value="7">7 MATCHES</option>
+                    <option value="8">8 MATCHES</option>
+                    <option value="9">9 MATCHES</option>
+                    <option value="10">10 MATCHES</option>
+                    <option value="11">11 MATCHES</option>
+                    <option value="12">12 MATCHES</option>
+                </select>
+            </span>
+        </div>
+    </header>
+
+    <!-- Dashboard -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
+            <div class="stat-info">
+                <h4>ทีมทั้งหมด</h4>
+                <div class="stat-value" id="stat-teams">0</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fa-solid fa-gamepad"></i></div>
+            <div class="stat-info">
+                <h4>เกมที่ยืนยัน</h4>
+                <div class="stat-value" id="stat-games">0 / 6</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="color: var(--accent-gold);"><i class="fa-solid fa-crown"></i></div>
+            <div class="stat-info">
+                <h4>Booyah รวม</h4>
+                <div class="stat-value" id="stat-booyah">0</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="color: #e2e8f0;"><i class="fa-solid fa-medal"></i></div>
+            <div class="stat-info">
+                <h4>Top 3 / Top 5</h4>
+                <div class="stat-value" id="stat-top35">0 / 0</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="color: var(--place-color);"><i class="fa-solid fa-chart-line"></i></div>
+            <div class="stat-info">
+                <h4>Avg Rank</h4>
+                <div class="stat-value" id="stat-avgrank">0.0</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="color: var(--kill-color);"><i class="fa-solid fa-crosshairs"></i></div>
+            <div class="stat-info">
+                <h4>Kills รวม / Avg</h4>
+                <div class="stat-value" id="stat-kills">0 (0.0)</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="color: var(--total-color);"><i class="fa-solid fa-star"></i></div>
+            <div class="stat-info">
+                <h4>คะแนนรวม</h4>
+                <div class="stat-value" id="stat-score">0</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Controls Bar -->
+    <div class="controls-bar" id="controls-bar">
+        <div class="search-box">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="search-input" placeholder="ค้นหาชื่อทีม...">
+        </div>
+
+        <div class="btn-group">
+            <!-- Undo / Redo -->
+            <button class="btn" id="btn-undo" title="Undo" disabled><i class="fa-solid fa-rotate-left"></i> Undo</button>
+            <button class="btn" id="btn-redo" title="Redo" disabled><i class="fa-solid fa-rotate-right"></i> Redo</button>
+
+            <button class="btn btn-gold" id="btn-add-team"><i class="fa-solid fa-plus"></i> เพิ่มทีม</button>
+
+            <!-- Settings -->
+            <button class="btn" id="btn-settings"><i class="fa-solid fa-gear" style="color:#a855f7;"></i> ตั้งค่าทัวร์นาเมนต์</button>
+
+            <!-- Import -->
+            <button class="btn" id="btn-import-csv"><i class="fa-solid fa-file-csv" style="color:#38bdf8;"></i> Import CSV</button>
+            <button class="btn" id="btn-import-excel"><i class="fa-solid fa-file-excel" style="color:#22c55e;"></i> Import Excel</button>
+
+            <!-- Backup/Restore -->
+            <button class="btn" id="btn-backup-json"><i class="fa-solid fa-download" style="color:#a855f7;"></i> Backup JSON</button>
+            <button class="btn" id="btn-restore-json"><i class="fa-solid fa-upload" style="color:#ec4899;"></i> Restore JSON</button>
+            <button class="btn" id="btn-auto-backups"><i class="fa-solid fa-clock-rotate-left" style="color:#eab308;"></i> Auto Backups</button>
+
+            <!-- Export -->
+            <button class="btn" id="btn-export-excel"><i class="fa-solid fa-file-excel" style="color:#22c55e;"></i> Excel</button>
+            <button class="btn" id="btn-export-png"><i class="fa-solid fa-image" style="color:#eab308;"></i> Export PNG</button>
+            <button class="btn" id="btn-export-top3"><i class="fa-solid fa-trophy" style="color:#eab308;"></i> Top 3 PNG</button>
+            <button class="btn" id="btn-export-mvp"><i class="fa-solid fa-skull" style="color:#f87171;"></i> MVP PNG</button>
+
+            <button class="btn" onclick="window.print()"><i class="fa-solid fa-print"></i> พิมพ์</button>
+            <button class="btn btn-reset" id="btn-reset-all"><i class="fa-solid fa-rotate-left"></i> รีเซ็ต</button>
+        </div>
+    </div>
+
+    <!-- Hidden Inputs -->
+    <input type="file" id="input-file-csv" accept=".csv" style="display: none;">
+    <input type="file" id="input-file-excel" accept=".xlsx" style="display: none;">
+    <input type="file" id="input-file-json" accept=".json" style="display: none;">
+    <input type="file" id="input-file-logo" accept="image/*" style="display: none;">
+    <input type="file" id="input-file-player-photo" accept="image/*" style="display: none;">
+
+    <!-- Leaderboard Table -->
+    <div class="table-wrapper">
+        <table id="leaderboard-table">
+            <thead id="table-head">
+                <!-- Header Dynamically Rendered -->
+            </thead>
+            <tbody id="table-body">
+                <!-- Rows Dynamically Rendered -->
+            </tbody>
+            <tfoot id="table-footer">
+                <tr id="match-action-row">
+                    <td class="freeze-col-1"></td>
+                    <td class="freeze-col-2" style="font-weight: 700; color: var(--text-muted);">จัดการเกม:</td>
+                    <!-- Action Buttons Rendered Dynamically -->
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+<!-- [Player Dashboard v1] Section ใหม่ทั้งหมด แยกเป็น container อิสระ ไม่แตะ/ไม่อยู่ภายใน .container เดิมเลย
+     เพื่อไม่ให้กระทบ Layout, DOM tree หรือ CSS ของ Leaderboard เดิมแม้แต่น้อย ใช้ Theme (Dark+Gold) เดียวกัน -->
+<div class="container" id="player-dashboard-section">
+    <h2 class="pd-section-title"><i class="fa-solid fa-crosshairs" style="color: var(--kill-color);"></i> Player Kill Dashboard</h2>
+
+    <!-- Card 1-3: ผู้เล่นทั้งหมด / Kill รวม / MVP -->
+    <div class="pd-stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
+            <div class="stat-info">
+                <h4>ผู้เล่นทั้งหมด</h4>
+                <div class="stat-value" id="pd-stat-players">0</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="color: var(--kill-color);"><i class="fa-solid fa-crosshairs"></i></div>
+            <div class="stat-info">
+                <h4>Kill รวมทั้งหมด</h4>
+                <div class="stat-value" id="pd-stat-totalkill">0</div>
+            </div>
+        </div>
+        <div class="pd-mvp-card" id="pd-mvp-card">
+            <div class="pd-mvp-icon"><i class="fa-solid fa-crown"></i></div>
+            <div class="pd-mvp-info">
+                <h4>MVP Tournament</h4>
+                <div class="pd-mvp-name" id="pd-mvp-name">-</div>
+                <div class="pd-mvp-detail" id="pd-mvp-detail">0 Kills</div>
+                <div class="pd-mvp-prize" id="pd-mvp-prize" style="display:none;">Prize 150 บาท</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Player Kill Table -->
+    <!-- [v4.0 UI Refresh] ซ่อนตารางแบนนี้ไว้ก่อน — การแก้ไข/ดูผู้เล่นรายทีมย้ายไปอยู่ใน Accordion ของตารางคะแนนหลักแล้ว
+         การ์ดสรุป (ผู้เล่นทั้งหมด/Kill รวม/MVP) ด้านบนยังคงแสดงตามปกติ -->
+    <div class="table-wrapper" style="display:none;">
+        <table id="player-kill-table">
+            <thead id="player-table-head"></thead>
+            <tbody id="player-table-body"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- [v6.0] เครดิตผู้พัฒนา ตัวเล็กๆ มุมล่างสุดของหน้าเว็บ -->
+<footer class="dev-credit-footer">
+    พัฒนาโดย
+    <a href="https://instagram.com/minoru_z24" target="_blank" rel="noopener noreferrer">@minoru_z24</a>
+    &amp;
+    <a href="https://instagram.com/nes_101_kll" target="_blank" rel="noopener noreferrer">@nes_101_kll</a>
+</footer>
+
+<!-- Modal Restore Preview -->
+<div class="modal-overlay" id="restore-modal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <span><i class="fa-solid fa-file-invoice" style="color: var(--accent-gold);"></i> ยืนยันการ Restore ข้อมูล</span>
+            <button class="btn-del" id="btn-close-restore"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body" id="modal-preview-content"></div>
+        <div class="modal-footer">
+            <button class="btn" id="btn-modal-cancel">ยกเลิก</button>
+            <button class="btn btn-gold" id="btn-modal-confirm">ยืนยัน Restore</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Auto Backups -->
+<div class="modal-overlay" id="auto-backups-modal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <span><i class="fa-solid fa-clock-rotate-left" style="color: var(--accent-gold);"></i> ประวัติ Auto Backup (10 ชุดล่าสุด)</span>
+            <button class="btn-del" id="btn-close-autobackup"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body" id="auto-backups-list"></div>
+    </div>
+</div>
+
+<!-- Modal Settings -->
+<div class="modal-overlay" id="settings-modal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <span><i class="fa-solid fa-gear" style="color: var(--accent-gold);"></i> ตั้งค่าทัวร์นาเมนต์ (Tournament Settings)</span>
+            <button class="btn-del" id="btn-close-settings"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>ชื่อการแข่งขัน (Tournament Name)</label>
+                <input type="text" id="setting-name" placeholder="Free Fire BR Tournament">
+            </div>
+            <div class="form-group">
+                <label>ซีซั่น (Season)</label>
+                <input type="text" id="setting-season" placeholder="Season 1">
+            </div>
+            <div class="form-group">
+                <label>ลีก (League)</label>
+                <input type="text" id="setting-league" placeholder="Pro League">
+            </div>
+            <div class="form-group">
+                <label>วันที่ (Date)</label>
+                <input type="text" id="setting-date" placeholder="2026-08-01">
+            </div>
+            <div class="form-group">
+                <label>แผนที่ (Map)</label>
+                <input type="text" id="setting-map" placeholder="Bermuda / Purgatory">
+            </div>
+            <div class="form-group">
+                <label>ห้อง/กลุ่ม (Room)</label>
+                <input type="text" id="setting-room" placeholder="Room A">
+            </div>
+            <div class="form-group">
+                <label>รอบการแข่งขัน (Round)</label>
+                <input type="text" id="setting-round" placeholder="Finals">
+            </div>
+            <div class="form-group">
+                <label>ผู้จัดงาน (Organizer)</label>
+                <input type="text" id="setting-organizer" placeholder="Official Esports">
+            </div>
+            <div class="form-group">
+                <label>โลโก้การแข่งขัน (Tournament Logo)</label>
+                <div class="drag-area" id="tournament-logo-drop">
+                    <p id="tour-logo-status">คลิกหรือลากวางไฟล์โลโก้ทัวร์นาเมนต์ที่นี่</p>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-gold" id="btn-save-settings">บันทึกการตั้งค่า</button>
+        </div>
+    </div>
+</div>
+
+<!-- Export Container -->
+<div id="export-container"></div>
+
+<!-- ============== [Cloud v3.0] Admin Access Button (มุมขวาล่าง) ============== -->
+<button id="admin-toggle-btn" title="Admin Login" style="
+    position: fixed; bottom: 20px; right: 20px; width: 50px; height: 50px;
+    border-radius: 50%; background: var(--bg-card); border: 1px solid var(--border-color);
+    color: var(--text-muted); font-size: 1.2rem; cursor: pointer; z-index: 900;
+    display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(0,0,0,0.6);
+">
+    <i class="fa-solid fa-gear"></i>
+</button>
+
+<!-- ============== [Cloud v3.0] Admin Mode Banner ============== -->
+<div id="admin-banner" class="container" style="display:none; align-items:center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+    background: rgba(22,163,74,0.12); border: 1px solid var(--btn-confirm); color: #4ade80;
+    padding: 10px 20px; border-radius: 10px; margin-bottom: 15px; font-weight:600; font-size:0.9rem;">
+    <span><i class="fa-solid fa-circle-check"></i> Admin Mode Active — สามารถบันทึกคะแนนและจัดการทัวร์นาเมนต์ได้</span>
+    <button id="admin-logout-btn" class="btn" style="padding:4px 10px; font-size:0.75rem;">ออกจากโหมด Admin</button>
+</div>
+
+<!-- ============== [Cloud v3.0] PIN Login Modal ============== -->
+<div class="modal-overlay" id="pin-modal">
+    <div class="modal-card" style="max-width: 340px;">
+        <div class="modal-header">
+            <span><i class="fa-solid fa-lock" style="color: var(--accent-gold);"></i> Admin Login</span>
+            <button class="btn-del" id="pin-cancel-btn"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form id="pin-form">
+            <div class="form-group">
+                <label>กรอกรหัส PIN เพื่อเข้าสู่โหมดจัดการคะแนน</label>
+                <input type="password" id="pin-input" inputmode="numeric" placeholder="••••" autocomplete="off"
+                    style="text-align:center; letter-spacing: 8px; font-size:1.3rem;">
+            </div>
+            <p id="pin-error" style="display:none; color: var(--error-border); font-size: 0.8rem; margin-bottom: 10px;">
+                รหัส PIN ไม่ถูกต้อง
+            </p>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-gold" style="width:100%; justify-content:center;">เข้าสู่ระบบ</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script type="module">
+    // ===================================================================
+    // [Cloud v3.0] FIREBASE BRIDGE
+    // เชื่อมระบบเดิม (ซึ่งทำงานแบบ LocalStorage ล้วนๆ) เข้ากับ Cloud แบบเรียลไทม์
+    // ใช้ Firebase Modular SDK ผ่าน CDN โดยตรง ไม่ต้องมี Node.js / bundler ใดๆ
+    // สคริปต์หลักด้านล่าง (ระบบทัวร์นาเมนต์ทั้งหมด) เรียกใช้งานผ่าน window.cloudXXX
+    // เพื่อไม่ต้องแปลงสคริปต์เดิมทั้งไฟล์ (2000+ บรรทัด) ให้เป็น module
+    // ===================================================================
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+    import {
+        getFirestore, doc, setDoc, getDoc, onSnapshot, serverTimestamp,
+    } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+    import {
+        getStorage, ref, uploadBytes, getDownloadURL,
+    } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-storage.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyAUt-ulJZBAI9jx1aq_SXu-IKvOLM9kyLI",
+        authDomain: "minoru69-fa98e.firebaseapp.com",
+        projectId: "minoru69-fa98e",
+        storageBucket: "minoru69-fa98e.firebasestorage.app",
+        messagingSenderId: "1056733374533",
+        appId: "1:1056733374533:web:c29d17e7cd57ba27131b2c",
+        measurementId: "G-6F67N1CW0Y",
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+
+    // ทุกอุปกรณ์ที่เปิดลิงก์นี้อ่าน/เขียนสถานะทัวร์นาเมนต์ชุดเดียวกันที่เอกสารนี้เอกสารเดียว
+    const stateDocRef = doc(db, "tournament", "live");
+
+    // เขียนสถานะทั้งหมดขึ้น Firestore (สคริปต์หลักเรียกทุกครั้งที่มีการบันทึกคะแนน/ตั้งค่า ผ่าน saveToLocalStorage)
+    window.cloudSaveState = async function (payload) {
+        try {
+            await setDoc(stateDocRef, { ...payload, cloudUpdatedAt: serverTimestamp() });
+            window.dispatchEvent(new CustomEvent("cloud-status", { detail: { status: "live" } }));
+        } catch (err) {
+            console.error("Cloud sync error:", err);
+            window.dispatchEvent(new CustomEvent("cloud-status", { detail: { status: "error" } }));
+        }
+    };
+
+    // โหลดสถานะล่าสุดตอนเปิดหน้าเว็บครั้งแรก (เรียกครั้งเดียว) — คืนค่า null ถ้ายังไม่เคยมีข้อมูลบน Cloud เลย
+    window.cloudLoadInitial = async function () {
+        const snap = await getDoc(stateDocRef);
+        return snap.exists() ? snap.data() : null;
+    };
+
+    // สมัครรับข้อมูลแบบเรียลไทม์: ทุกครั้งที่มีการบันทึกจากอุปกรณ์ไหนก็ตาม callback นี้จะถูกเรียกอัตโนมัติทันที
+    window.cloudSubscribe = function (callback) {
+        onSnapshot(stateDocRef, (snap) => {
+            if (snap.exists()) callback(snap.data());
+            window.dispatchEvent(new CustomEvent("cloud-status", { detail: { status: "live" } }));
+        }, (err) => {
+            console.error("Cloud listen error:", err);
+            window.dispatchEvent(new CustomEvent("cloud-status", { detail: { status: "error" } }));
+        });
+    };
+
+    // อัปโหลดไฟล์โลโก้ขึ้น Firebase Storage แล้วคืนค่าเป็นลิงก์ URL แทนการฝัง base64 ตรงๆ ลง Firestore
+    // (สำคัญ: เอกสาร Firestore มีขีดจำกัด 1MB — ถ้าฝังโลโก้ 12+ ทีมเป็น base64 ตรงๆ จะชนขีดจำกัดง่ายมาก)
+    window.cloudUploadLogo = async function (file, pathHint) {
+        const safeHint = String(pathHint).replace(/[^a-zA-Z0-9_-]/g, "_");
+        const path = `logos/${safeHint}_${Date.now()}_${file.name}`;
+        const fileRef = ref(storage, path);
+        await uploadBytes(fileRef, file);
+        return await getDownloadURL(fileRef);
+    };
+</script>
+
+<script>
+    const STORAGE_KEY = 'FF_BR_LEADERBOARD_SYSTEM_DATA';
+    const AUTO_BACKUP_KEY = 'FF_BR_AUTO_BACKUPS';
+
+    // Application State
+    // [v2.0 Dynamic Match] totalMatches คือตัวแปรควบคุมจำนวนเกมที่ใช้งานจริง (1-12)
+    // ค่าเริ่มต้น 6 เพื่อคงพฤติกรรมเดิมของระบบไว้ ผู้ใช้เปลี่ยนได้ผ่าน dropdown #select-total-matches
+    let totalMatches = 6;
+    let teams = [];
+    // [v2.0 Dynamic Match] matchConfirmed คงขนาดไว้ที่ 12 ช่องเสมอ (ไม่ผูกกับ totalMatches โดยตรง)
+    // เพื่อให้สถานะ "ยืนยันแล้ว" ของเกมที่ถูกซ่อน (เมื่อลดจำนวนเกม) ไม่หายไป
+    let matchConfirmed = Array(12).fill(false);
+    let tournamentSettings = {
+        name: 'Free Fire BR Tournament',
+        season: '',
+        league: '',
+        date: '',
+        map: '',
+        room: '',
+        round: '',
+        organizer: '',
+        logo: ''
+    };
+    // [v5.0] แผนที่ (อัปโหลดผ่านเมนู เกมเพลย์ > แผนที่) และข่าวสาร/ประกาศ — sync ขึ้น Cloud เหมือนข้อมูลอื่นๆ
+    let mapImages = []; // [{ id, url }]
+    let newsContent = '';
+    // [Cloud v3.0] เริ่มต้นเป็น Viewer เสมอสำหรับทุกคนที่เปิดลิงก์ (เดิมเช็คจาก ?viewer=true ใน URL)
+    // ปลดล็อกเป็น Admin ได้ทางเดียวคือกดไอคอนเฟืองแล้วใส่ PIN ให้ถูก (ดู setAdminMode ท้ายไฟล์)
+    let isViewerMode = true;
+    let pendingRestoreData = null;
+    let activeTeamLogoId = null;
+    let activePlayerPhotoTarget = null; // [v4.0 UI Refresh] { teamId, playerId } กำลังจะอัปโหลดรูป
+
+    // Undo / Redo History Stack (Max 20)
+    let historyStack = [];
+    let historyIndex = -1;
+    const MAX_HISTORY = 20;
+
+    // Official Free Fire Scoring Rule
+    const OFFICIAL_PLACEMENT_SCORES = {
+        1: 12, 2: 9, 3: 8, 4: 7, 5: 6, 6: 5,
+        7: 4, 8: 3, 9: 2, 10: 1, 11: 0, 12: 0
+    };
+
+    function getPlacementScore(rank) {
+        const r = parseInt(rank, 10);
+        return OFFICIAL_PLACEMENT_SCORES[r] || 0;
+    }
+
+    // [Player Dashboard v1] จำนวนผู้เล่นต่อทีม
+    // [v4.0 UI Refresh] ปรับจาก 4 เป็น 5 คนต่อทีมตามที่ขอ — ทีมเก่าที่เคยมีแค่ 4 คนจะถูกเติมคนที่ 5 ให้อัตโนมัติ (ดู ensurePlayersData)
+    const PLAYERS_PER_TEAM = 5;
+
+    function createDefaultPlayers() {
+        return Array.from({ length: PLAYERS_PER_TEAM }, (_, idx) => ({
+            id: 'player_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5) + '_' + idx,
+            name: `Player${idx + 1}`,
+            // [v4.0 UI Refresh] รูปโปรไฟล์ผู้เล่น (เก็บเป็นลิงก์ URL จาก Firebase Storage หลังอัปโหลด)
+            photo: '',
+            // เก็บ Kill รายเกมของผู้เล่นแยกจาก team.games[].kill (ซึ่งตอนนี้เป็นค่าที่ sync มาจากผลรวมนี้)
+            kills: Array(12).fill(0),
+            totalKill: 0
+        }));
+    }
+
+    function createNewTeamObject(name, logo = '') {
+        return {
+            id: 'team_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+            name: name,
+            logo: logo,
+            // [v2.0 Dynamic Match] จองพื้นที่ games ไว้เต็ม 12 ช่องเสมอ (ไม่ใช่แค่ totalMatches ช่อง)
+            // เพื่อ Data Persistence: ลดจำนวนเกมแล้วข้อมูลเกมที่ถูกซ่อนจะไม่ถูกลบ และกลับมาแสดงผลได้เมื่อเพิ่มเกมกลับ
+            games: Array(12).fill().map(() => ({ placement: 0, kill: 0 })),
+            totalPlace: 0,
+            totalKill: 0,
+            totalScore: 0,
+            booyahCount: 0,
+            top3Count: 0,
+            top5Count: 0,
+            avgRank: 0,
+            avgKill: 0,
+            // [Player Dashboard v1] ผู้เล่น 4 คนต่อทีม สร้างอัตโนมัติทุกครั้งที่สร้างทีมใหม่
+            players: createDefaultPlayers()
+        };
+    }
+
+    function generateDefaultTeams() {
+        return Array.from({ length: 12 }, (_, i) => createNewTeamObject(`Team ${String.fromCharCode(65 + i)}`));
+    }
+
+    // [Player Dashboard v1] เติม players ให้ทีมเก่าที่โหลดมาจาก LocalStorage/Backup/Import ก่อนฟีเจอร์นี้จะมี (ไม่มี field players)
+    // เรียกทุกครั้งหลัง teams ถูก assign ใหม่จากแหล่งภายนอก (load/restore/import/undo-redo)
+    function ensurePlayersData() {
+        teams.forEach(team => {
+            if (!Array.isArray(team.players) || team.players.length === 0) {
+                team.players = createDefaultPlayers();
+            } else {
+                // เผื่อทีมมี players ไม่ครบ 4 คน (เช่นข้อมูลเก่าจากเวอร์ชันทดลอง) เติมให้ครบ
+                while (team.players.length < PLAYERS_PER_TEAM) {
+                    team.players.push(createDefaultPlayers()[team.players.length]);
+                }
+                team.players.forEach(p => {
+                    if (!Array.isArray(p.kills)) p.kills = Array(12).fill(0);
+                    while (p.kills.length < 12) p.kills.push(0);
+                    if (typeof p.totalKill !== 'number') p.totalKill = 0;
+                    if (typeof p.name !== 'string') p.name = 'Player';
+                    if (typeof p.photo !== 'string') p.photo = ''; // [v4.0 UI Refresh]
+                });
+            }
+        });
+    }
+
+    // --- History (Undo / Redo) Management ---
+    function recordState() {
+        const snapshot = JSON.stringify({
+            totalMatches,
+            teams,
+            matchConfirmed,
+            tournamentSettings
+        });
+
+        if (historyIndex >= 0 && historyStack[historyIndex] === snapshot) return;
+
+        historyStack = historyStack.slice(0, historyIndex + 1);
+        historyStack.push(snapshot);
+        if (historyStack.length > MAX_HISTORY) {
+            historyStack.shift();
+        } else {
+            historyIndex++;
+        }
+        updateUndoRedoButtons();
+    }
+
+    function undo() {
+        if (historyIndex > 0) {
+            historyIndex--;
+            applyState(historyStack[historyIndex]);
+        }
+    }
+
+    function redo() {
+        if (historyIndex < historyStack.length - 1) {
+            historyIndex++;
+            applyState(historyStack[historyIndex]);
+        }
+    }
+
+    function applyState(snapshotStr) {
+        try {
+            const data = JSON.parse(snapshotStr);
+            totalMatches = data.totalMatches;
+            teams = data.teams;
+            matchConfirmed = data.matchConfirmed;
+            tournamentSettings = data.tournamentSettings || tournamentSettings;
+
+            document.getElementById('select-total-matches').value = totalMatches;
+            calculateTotals();
+            sortTeams();
+            renderHeaderUI();
+            renderTableHeader();
+            renderTable();
+            updateSummaryCards();
+            renderPlayerDashboard(); // [Player Dashboard v1]
+            saveToLocalStorage(false);
+            updateUndoRedoButtons();
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    function updateUndoRedoButtons() {
+        const undoBtn = document.getElementById('btn-undo');
+        const redoBtn = document.getElementById('btn-redo');
+        if (undoBtn) undoBtn.disabled = historyIndex <= 0;
+        if (redoBtn) redoBtn.disabled = historyIndex >= historyStack.length - 1;
+    }
+
+    // --- System Initialization ---
+    document.addEventListener('DOMContentLoaded', () => {
+        applyViewerModeUI(); // ตั้งหน้าตาเริ่มต้นเป็น Viewer ก่อนเสมอ
+        initApp();            // [Cloud v3.0] โหลดข้อมูลจาก Firestore + เปิดการซิงก์เรียลไทม์ (แทนการ poll LocalStorage แบบเดิม)
+        setupGlobalEvents();
+        setupAdminAuthEvents(); // [Cloud v3.0] ปุ่มเฟือง + ฟอร์ม PIN
+        setupNavEvents(); // [v5.0] เมนู เกมเพลย์/แผนที่/ข่าวสาร
+        startAutoSaveInterval();
+
+        // [Cloud v3.0] คงสถานะ Admin ไว้ถ้าเคยใส่ PIN ถูกในแท็บนี้มาก่อนแล้ว (หายไปเมื่อปิดแท็บ/เบราว์เซอร์)
+        if (sessionStorage.getItem(ADMIN_SESSION_KEY) === 'true') setAdminMode(true);
+    });
+
+    // ===================================================================
+    // [Cloud v3.0] ADMIN AUTH (ระบบ PIN)
+    // หมายเหตุด้านความปลอดภัย: นี่คือการล็อกฝั่ง "หน้าจอ" (UI) เท่านั้น เพื่อกันคนทั่วไปเห็น/แก้ไขฟอร์มโดยบังเอิญ
+    // มันไม่ได้ปกป้องฐานข้อมูลจริงๆ — การป้องกันฐานข้อมูลต้องตั้งค่าใน Firestore/Storage Security Rules
+    // ถ้าต้องการความปลอดภัยระดับ production จริงจัง ควรเปลี่ยนไปใช้ Firebase Authentication แทนการฮาร์ดโค้ด PIN นี้
+    // ===================================================================
+    const ADMIN_PIN = "2550"; // TODO: เปลี่ยนรหัสนี้ก่อนใช้งานจริง
+    const ADMIN_SESSION_KEY = "ff_admin_session_v1";
+
+    // แสดง/ซ่อน UI ของ Admin ตามค่า isViewerMode ปัจจุบัน (เรียกได้ทั้งตอนโหลดหน้าครั้งแรกและตอนสลับโหมด)
+    function applyViewerModeUI() {
+        document.body.classList.toggle('viewer-mode', isViewerMode);
+
+        const cb = document.getElementById('controls-bar');
+        const tf = document.getElementById('table-footer');
+        const ms = document.getElementById('match-select-container');
+        if (cb) cb.style.display = isViewerMode ? 'none' : '';
+        if (tf) tf.style.display = isViewerMode ? 'none' : '';
+        if (ms) ms.style.display = isViewerMode ? 'none' : '';
+
+        const banner = document.getElementById('admin-banner');
+        const gearBtn = document.getElementById('admin-toggle-btn');
+        if (banner) banner.style.display = isViewerMode ? 'none' : 'flex';
+        if (gearBtn) gearBtn.style.display = isViewerMode ? 'flex' : 'none';
+    }
+
+    function setAdminMode(active) {
+        isViewerMode = !active;
+        applyViewerModeUI();
+
+        if (active) {
+            sessionStorage.setItem(ADMIN_SESSION_KEY, 'true');
+            saveToLocalStorage(false); // ผลักสถานะปัจจุบันขึ้น Cloud ทันทีที่ปลดล็อก Admin สำเร็จ ไม่ต้องรอแก้ไขครั้งแรก
+        } else {
+            sessionStorage.removeItem(ADMIN_SESSION_KEY);
+        }
+
+        // วาดตารางใหม่ทั้งหมดเพื่อสลับ input/ปุ่มต่างๆ ให้ตรงกับสิทธิ์ใหม่
+        renderTableHeader();
+        renderTable();
+        renderPlayerDashboard();
+    }
+
+    function openPinModal() {
+        document.getElementById('pin-error').style.display = 'none';
+        const input = document.getElementById('pin-input');
+        input.value = '';
+        document.getElementById('pin-modal').classList.add('active');
+        input.focus();
+    }
+
+    function closePinModal() {
+        document.getElementById('pin-modal').classList.remove('active');
+    }
+
+    function handlePinSubmit(e) {
+        e.preventDefault();
+        const val = document.getElementById('pin-input').value;
+        if (val === ADMIN_PIN) {
+            setAdminMode(true);
+            closePinModal();
+        } else {
+            document.getElementById('pin-error').style.display = 'block';
+        }
+    }
+
+    function setupAdminAuthEvents() {
+        document.getElementById('admin-toggle-btn')?.addEventListener('click', openPinModal);
+        document.getElementById('pin-cancel-btn')?.addEventListener('click', closePinModal);
+        document.getElementById('pin-form')?.addEventListener('submit', handlePinSubmit);
+        document.getElementById('admin-logout-btn')?.addEventListener('click', () => setAdminMode(false));
+    }
+
+    // ===================================================================
+    // [v5.0] TOP NAV: เมนู "เกมเพลย์" (dropdown) + "แผนที่" + "ข่าวสาร"
+    // ===================================================================
+    function setupNavEvents() {
+        // เกมเพลย์: เปิด/ปิด dropdown ได้ทั้งคลิกและ hover (hover ทำงานผ่าน CSS :hover อยู่แล้ว)
+        const gameplayItem = document.getElementById('nav-gameplay');
+        gameplayItem?.querySelector(':scope > span')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            gameplayItem.classList.toggle('is-open');
+        });
+        document.addEventListener('click', () => gameplayItem?.classList.remove('is-open'));
+
+        document.querySelector('[data-action="open-map-modal"]')?.addEventListener('click', () => {
+            gameplayItem?.classList.remove('is-open');
+            openMapModal();
+        });
+        document.querySelector('[data-action="open-news-modal"]')?.addEventListener('click', openNewsModal);
+
+        document.getElementById('map-modal-close-btn')?.addEventListener('click', () => {
+            document.getElementById('map-modal').classList.remove('active');
+        });
+        document.getElementById('news-modal-close-btn')?.addEventListener('click', () => {
+            document.getElementById('news-modal').classList.remove('active');
+        });
+
+        // --- แผนที่ (Map Gallery) ---
+        document.getElementById('map-add-btn')?.addEventListener('click', () => {
+            const input = document.getElementById('input-file-map');
+            input.value = '';
+            input.click();
+        });
+        document.getElementById('input-file-map')?.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files[0]) handleMapImageUpload(e.target.files[0]);
+        });
+        document.getElementById('map-gallery')?.addEventListener('click', (e) => {
+            const delBtn = e.target.closest('[data-action="delete-map-image"]');
+            if (delBtn && !isViewerMode) deleteMapImage(delBtn.dataset.mapId);
+        });
+
+        // --- ข่าวสาร (News) ---
+        document.getElementById('news-edit-btn')?.addEventListener('click', () => {
+            document.getElementById('news-textarea').value = newsContent;
+            document.getElementById('news-view-mode').style.display = 'none';
+            document.getElementById('news-edit-mode').style.display = 'block';
+        });
+        document.getElementById('news-cancel-btn')?.addEventListener('click', () => {
+            document.getElementById('news-edit-mode').style.display = 'none';
+            document.getElementById('news-view-mode').style.display = 'block';
+        });
+        document.getElementById('news-save-btn')?.addEventListener('click', () => {
+            newsContent = document.getElementById('news-textarea').value;
+            renderNewsModal();
+            document.getElementById('news-edit-mode').style.display = 'none';
+            document.getElementById('news-view-mode').style.display = 'block';
+            saveToLocalStorage();
+            recordState();
+        });
+    }
+
+    function openMapModal() {
+        renderMapGallery();
+        document.getElementById('map-modal').classList.add('active');
+    }
+
+    function renderMapGallery() {
+        const gallery = document.getElementById('map-gallery');
+        const addBtn = document.getElementById('map-add-btn');
+        const emptyMsg = document.getElementById('map-empty-msg');
+
+        addBtn.style.display = isViewerMode ? 'none' : 'flex';
+        emptyMsg.style.display = mapImages.length === 0 ? 'block' : 'none';
+
+        gallery.innerHTML = mapImages.map(m => `
+            <div class="map-gallery-item">
+                <img src="${m.url}" alt="แผนที่การแข่งขัน">
+                ${isViewerMode ? '' : `<button class="map-del-btn" data-action="delete-map-image" data-map-id="${m.id}" title="ลบรูปนี้"><i class="fa-solid fa-xmark"></i></button>`}
+            </div>
+        `).join('');
+    }
+
+    // [v5.0] อัปโหลดรูปแผนที่ขึ้น Firebase Storage เหมือนโลโก้ทีม/รูปผู้เล่น แล้วเก็บลิงก์ไว้ใน mapImages
+    // (sync ขึ้น Cloud ผ่าน saveToLocalStorage เหมือนข้อมูลส่วนอื่นๆ ของระบบ — Viewer ทุกคนเห็นรูปที่แอดมินเพิ่มทันที)
+    async function handleMapImageUpload(file) {
+        if (!file) return;
+        const id = 'map_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+
+        if (window.cloudUploadLogo) {
+            try {
+                const url = await window.cloudUploadLogo(file, id);
+                mapImages.push({ id, url });
+                renderMapGallery();
+                saveToLocalStorage();
+                recordState();
+                return;
+            } catch (err) {
+                console.error('อัปโหลดรูปแผนที่ขึ้น Cloud Storage ไม่สำเร็จ กำลังใช้ไฟล์ในเครื่องแทน:', err);
+            }
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            mapImages.push({ id, url: e.target.result });
+            renderMapGallery();
+            saveToLocalStorage();
+            recordState();
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function deleteMapImage(mapId) {
+        mapImages = mapImages.filter(m => m.id !== mapId);
+        renderMapGallery();
+        saveToLocalStorage();
+        recordState();
+    }
+
+    function openNewsModal() {
+        renderNewsModal();
+        document.getElementById('news-modal').classList.add('active');
+    }
+
+    function renderNewsModal() {
+        const display = document.getElementById('news-content-display');
+        const editBtn = document.getElementById('news-edit-btn');
+        display.innerText = newsContent && newsContent.trim()
+            ? newsContent
+            : (isViewerMode ? 'ยังไม่มีข่าวสารในตอนนี้' : 'ยังไม่มีข่าวสาร — กด "แก้ไขข่าวสาร" ด้านล่างเพื่อเริ่มพิมพ์ได้เลย');
+        editBtn.style.display = isViewerMode ? 'none' : 'inline-flex';
+    }
+
+    // [Cloud v3.0] อัปเดตแถบสถานะการเชื่อมต่อ (จุดสีเขียว/แดง + ข้อความ) ตามอีเวนต์จากสะพาน Firebase
+    window.addEventListener('cloud-status', (e) => {
+        const dot = document.getElementById('cloud-status-dot');
+        const text = document.getElementById('cloud-status-text');
+        if (!dot || !text) return;
+        if (e.detail.status === 'live') {
+            dot.style.background = '#4ade80';
+            text.textContent = 'LIVE';
+        } else {
+            dot.style.background = '#ef4444';
+            text.textContent = 'เชื่อมต่อไม่สำเร็จ';
+        }
+    });
+
+    // [Cloud v3.0] โหลดสถานะเริ่มต้นจาก Firestore ก่อนเป็นอันดับแรก ถ้าไม่มี (ยังไม่เคยมีใครบันทึกขึ้น Cloud เลย)
+    // จึงค่อย fallback ไปใช้ LocalStorage ของเครื่องนี้ตามระบบเดิม แล้วเปิดการฟังอัปเดตแบบเรียลไทม์ต่อทันที
+    async function initApp() {
+        let cloudData = null;
+        try {
+            if (window.cloudLoadInitial) cloudData = await window.cloudLoadInitial();
+        } catch (e) {
+            console.error('Cloud load error:', e);
+        }
+
+        if (cloudData) {
+            totalMatches = cloudData.totalMatches || 6;
+            teams = (cloudData.teams && cloudData.teams.length > 0) ? cloudData.teams : generateDefaultTeams();
+            matchConfirmed = cloudData.matchConfirmed || Array(12).fill(false);
+            tournamentSettings = cloudData.tournamentSettings || tournamentSettings;
+            mapImages = cloudData.mapImages || []; // [v5.0]
+            newsContent = cloudData.newsContent || ''; // [v5.0]
+            document.getElementById('select-total-matches').value = totalMatches;
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudData)); // sync cache ในเครื่องด้วย
+        } else {
+            loadFromLocalStorage();
+        }
+
+        // [v6.0] ต้องเติมผู้เล่นให้ครบ 5 คน/แก้ field ที่ขาดหาย "ก่อน" renderTable() เสมอ ไม่งั้น Accordion
+        // จะโชว์แค่ผู้เล่นเท่าที่มีอยู่เดิมใน Cloud (เช่น 4 คนจากก่อนอัปเป็น 5 คน) เพราะเดิมฟังก์ชันนี้ถูกเรียก
+        // ทีหลังใน renderPlayerDashboard() ซึ่งทำงานหลัง renderTable() ไปแล้ว
+        ensurePlayersData();
+
+        calculateTotals();
+        sortTeams();
+        renderHeaderUI();
+        renderTableHeader();
+        renderTable();
+        updateSummaryCards();
+        renderPlayerDashboard(); // [Player Dashboard v1]
+        recordState();
+
+        // ถ้าเพิ่งใช้ Fallback จาก LocalStorage (ยังไม่เคยมีข้อมูลบน Cloud) และเครื่องนี้เป็น Admin อยู่แล้ว
+        // (เช่น รีโหลดหน้าหลังใส่ PIN ค้างไว้) ให้ผลักข้อมูลชุดนี้ขึ้น Cloud เป็นชุดแรกทันที
+        saveToLocalStorage(false);
+
+        if (window.cloudSubscribe) window.cloudSubscribe(handleCloudUpdate);
+    }
+
+    // [Cloud v3.0] เรียกทุกครั้งที่มีการบันทึกคะแนน/ตั้งค่าจากอุปกรณ์ไหนก็ตาม (รวมถึงเครื่องตัวเองด้วย)
+    // ทำหน้าที่เหมือน loadFromLocalStorage + re-render ทั้งชุดของโค้ดเดิม แต่ทำงานอัตโนมัติแบบเรียลไทม์แทนการกดรีเฟรช
+    function handleCloudUpdate(data) {
+        totalMatches = data.totalMatches || totalMatches;
+        teams = (data.teams && data.teams.length > 0) ? data.teams : teams;
+        matchConfirmed = data.matchConfirmed || matchConfirmed;
+        tournamentSettings = data.tournamentSettings || tournamentSettings;
+        mapImages = data.mapImages || mapImages; // [v5.0]
+        newsContent = (typeof data.newsContent === 'string') ? data.newsContent : newsContent; // [v5.0]
+
+        // [v6.0] เหตุผลเดียวกับใน initApp() — ต้องเติมผู้เล่นให้ครบก่อน renderTable() เสมอ
+        ensurePlayersData();
+
+        const selectEl = document.getElementById('select-total-matches');
+        if (selectEl) selectEl.value = totalMatches;
+
+        // กันไม่ให้ค่าที่ผู้ใช้กำลังพิมพ์อยู่ (ยังไม่ยืนยัน) ถูกเขียนทับพอดีตอนมีอัปเดตเข้ามาจากอุปกรณ์อื่น
+        const active = document.activeElement;
+        const isTyping = active && active.matches && active.matches('.input-score, .team-name-input, .player-name-input');
+
+        calculateTotals();
+        sortTeams();
+        renderHeaderUI();
+        updateSummaryCards();
+
+        if (!isTyping) {
+            renderTableHeader();
+            renderTable();
+            renderPlayerDashboard();
+        } else {
+            renderPlayerDashboard(true); // อัปเดตตัวเลขสรุป/MVP แต่ข้ามการวาดตาราง input ใหม่ระหว่างพิมพ์
+        }
+
+        // [v5.0] ถ้า Modal แผนที่/ข่าวสาร เปิดอยู่พอดีตอนมีอัปเดตเข้ามา ให้วาดเนื้อหาใหม่ให้ตรงกันทันที
+        if (document.getElementById('map-modal')?.classList.contains('active')) renderMapGallery();
+        if (document.getElementById('news-modal')?.classList.contains('active')) renderNewsModal();
+
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+
+    function renderHeaderUI() {
+        const titleEl = document.getElementById('header-tournament-name');
+        const docTitle = document.getElementById('doc-title');
+        const metaEl = document.getElementById('header-meta');
+        const logoContainer = document.getElementById('tournament-logo-container');
+
+        if (titleEl) titleEl.innerText = tournamentSettings.name || 'Free Fire BR Tournament';
+        if (docTitle) docTitle.innerText = tournamentSettings.name || 'FREE FIRE BR TOURNAMENT LEADERBOARD';
+
+        if (logoContainer) {
+            if (tournamentSettings.logo) {
+                logoContainer.innerHTML = `<img src="${tournamentSettings.logo}" class="tournament-logo-img" alt="Logo">`;
+            } else {
+                logoContainer.innerHTML = `<div class="tournament-logo"><i class="fa-solid fa-trophy"></i></div>`;
+            }
+        }
+
+        if (metaEl) {
+            const parts = [];
+            if (tournamentSettings.season) parts.push(`<span><i class="fa-solid fa-calendar"></i> ${tournamentSettings.season}</span>`);
+            if (tournamentSettings.league) parts.push(`<span><i class="fa-solid fa-shield"></i> ${tournamentSettings.league}</span>`);
+            if (tournamentSettings.round) parts.push(`<span><i class="fa-solid fa-flag"></i> ${tournamentSettings.round}</span>`);
+            if (tournamentSettings.room) parts.push(`<span><i class="fa-solid fa-door-open"></i> ${tournamentSettings.room}</span>`);
+            if (tournamentSettings.map) parts.push(`<span><i class="fa-solid fa-map"></i> ${tournamentSettings.map}</span>`);
+            if (tournamentSettings.date) parts.push(`<span><i class="fa-solid fa-clock"></i> ${tournamentSettings.date}</span>`);
+            if (tournamentSettings.organizer) parts.push(`<span><i class="fa-solid fa-user-tie"></i> ${tournamentSettings.organizer}</span>`);
+            metaEl.innerHTML = parts.join(' | ');
+        }
+    }
+
+    // --- Dynamic Table Header ---
+    // [v2.0 Dynamic Match] เดิมหัวตาราง Game 1-6 เป็น HTML คงที่ ตอนนี้สร้างใหม่ทุกครั้งตาม totalMatches
+    // เรียกซ้ำได้ทุกครั้งที่ totalMatches เปลี่ยน (จาก dropdown, undo/redo, restore, viewer polling)
+    function renderTableHeader() {
+        const thead = document.getElementById('table-head');
+        
+        let matchHeaders = '';
+        let subHeaders = '';
+        for (let i = 0; i < totalMatches; i++) {
+            matchHeaders += `<th colspan="2">Game ${i + 1}</th>`;
+            subHeaders += `<th>Placement</th><th>Kill</th>`;
+        }
+
+        thead.innerHTML = `
+            <tr>
+                <th rowspan="2" class="freeze-col-1">อันดับ</th>
+                <th rowspan="2" class="freeze-col-2">ชื่อทีม</th>
+                ${matchHeaders}
+                <th rowspan="2">Booyah</th>
+                <th rowspan="2">Placement รวม</th>
+                <th rowspan="2">Kill รวม</th>
+                <th rowspan="2">คะแนนรวม</th>
+                <th rowspan="2" class="col-action" style="${isViewerMode ? 'display:none;' : ''}"></th>
+            </tr>
+            <tr class="sub-header">
+                ${subHeaders}
+            </tr>
+        `;
+    }
+
+    // --- Input Validation ---
+    function validateGameInputs(gameIndex) {
+        let isValid = true;
+        let errorMessage = "";
+
+        const placeInputs = Array.from(document.querySelectorAll(`.place-input[data-game-index="${gameIndex}"]`));
+        const killInputs = Array.from(document.querySelectorAll(`.kill-input[data-game-index="${gameIndex}"]`));
+
+        placeInputs.forEach(input => input.classList.remove('input-error'));
+        killInputs.forEach(input => input.classList.remove('input-error'));
+
+        // [v2.0.2 Direct-Points] ช่องนี้ตอนนี้คือ "แต้ม" ที่กรอกตรงๆ (อ้างอิงตารางทางการ สูงสุด 12 แต้ม สำหรับอันดับ 1)
+        // ไม่ผูกกับจำนวนทีมอีกต่อไป เพราะไม่ใช่ "อันดับ" แล้ว
+        const maxPlacement = 12;
+
+        // [Fix] ค่าว่าง หรือ 0 = ทีมยังไม่ได้ลงแข่งเกมนี้ (DNP) ไม่ถือเป็น error และไม่บังคับกรอกอีกต่อไป
+        // ตรวจแค่ว่า "ถ้ามีการกรอกค่า" ค่านั้นต้องเป็นตัวเลขที่ถูกต้องเท่านั้น
+        const invalidRangeTeams = [];
+        placeInputs.forEach(input => {
+            const val = input.value.trim();
+            if (val !== "") {
+                const num = Number(val);
+                // อนุญาต 0 (DNP) ผ่านได้เลย ไม่ต้อง validate ต่อ ตรวจแค่ 1-maxPlacement หรือค่าที่ไม่ใช่ตัวเลข/ติดลบ
+                if (!Number.isInteger(num) || num < 0 || num > maxPlacement) {
+                    input.classList.add('input-error');
+                    const teamId = input.dataset.teamId;
+                    const nameInput = document.querySelector(`.team-name-input[data-team-id="${teamId}"]`);
+                    const name = nameInput ? nameInput.value.trim() : 'Un-named Team';
+                    if (!invalidRangeTeams.includes(name)) invalidRangeTeams.push(name);
+                    isValid = false;
+                }
+            }
+        });
+
+        if (invalidRangeTeams.length > 0) {
+            errorMessage += `แต้ม Placement ต้องเป็น 0 (ยังไม่ลงแข่ง) หรืออยู่ในช่วง 1-${maxPlacement} (อ้างอิงตารางทางการ)\nทีมที่ไม่ถูกต้อง: ${invalidRangeTeams.join(', ')}\n\n`;
+        }
+
+        const invalidKillTeams = [];
+        killInputs.forEach(input => {
+            const val = input.value.trim();
+            if (val !== "") {
+                const num = Number(val);
+                if (!Number.isInteger(num) || num < 0) {
+                    input.classList.add('input-error');
+                    const teamId = input.dataset.teamId;
+                    const nameInput = document.querySelector(`.team-name-input[data-team-id="${teamId}"]`);
+                    const name = nameInput ? nameInput.value.trim() : 'Un-named Team';
+                    if (!invalidKillTeams.includes(name)) invalidKillTeams.push(name);
+                    isValid = false;
+                }
+            }
+        });
+
+        if (invalidKillTeams.length > 0) {
+            errorMessage += `จำนวน Kill ต้องเป็น 0 หรือมากกว่า\nทีมที่ไม่ถูกต้อง: ${invalidKillTeams.join(', ')}\n\n`;
+        }
+
+        // [Fix] Duplicate check: เอาเฉพาะอันดับจริง 1-maxPlacement มาตรวจซ้ำ
+        // ค่า 0 หรือช่องว่าง (ทีมยังไม่ได้ลงแข่ง) ไม่ถูกนำมานับว่าซ้ำกันอีกต่อไป ซ้ำกันได้ไม่จำกัดทีม
+        if (invalidRangeTeams.length === 0) {
+            const rankMap = {};
+            placeInputs.forEach(input => {
+                const val = input.value.trim();
+                if (val === "") return;
+                const num = parseInt(val, 10);
+                if (Number.isInteger(num) && num >= 1 && num <= maxPlacement) {
+                    if (!rankMap[num]) rankMap[num] = [];
+                    rankMap[num].push(input);
+                }
+            });
+
+            const duplicateRanks = [];
+            Object.keys(rankMap).forEach(rank => {
+                if (rankMap[rank].length > 1) {
+                    duplicateRanks.push(rank);
+                    rankMap[rank].forEach(input => input.classList.add('input-error'));
+                }
+            });
+
+            if (duplicateRanks.length > 0) {
+                errorMessage += `พบอันดับซ้ำใน Game ${gameIndex + 1} (อันดับ: ${duplicateRanks.join(', ')}) กรุณาแก้ไขก่อนยืนยัน`;
+                isValid = false;
+            }
+        }
+
+        if (!isValid && errorMessage) alert(errorMessage.trim());
+        return isValid;
+    }
+
+    function confirmGame(gameIndex) {
+        if (!validateGameInputs(gameIndex)) return;
+        matchConfirmed[gameIndex] = true;
+        readInputs(gameIndex);
+        calculateTotals();
+        sortTeams();
+        renderTable();
+        updateSummaryCards();
+        renderPlayerDashboard(); // [Player Dashboard v1]
+        saveToLocalStorage();
+        recordState();
+    }
+
+    function unlockMatch(gameIndex) {
+        // [Fix] เดิมพอปลดล็อกจะเรียก calculateTotals()/sortTeams() ทันที ทำให้คะแนนรวม "ทุกทีม" กลายเป็น 0
+        // และตารางสลับอันดับทั้งหมดตั้งแต่ยังไม่ทันแก้ไข-ยืนยันซ้ำ ถ้ายืนยันไม่ผ่าน (เช่นเจออันดับซ้ำ)
+        // ตารางจะค้างอยู่ในสภาพ 0 ทั้งตาราง ดูเหมือนกรอกยังไงก็ไม่เปลี่ยน — จึงตัด calculateTotals()/sortTeams()
+        // ออกจากจุดนี้ ให้คะแนน/อันดับที่เคยยืนยันไว้ยังคงค้างแสดงอยู่ จนกว่าจะยืนยันเกมนี้สำเร็จใหม่จริง ๆ
+        matchConfirmed[gameIndex] = false;
+        renderTable();
+        updateSummaryCards();
+        renderPlayerDashboard(); // [Player Dashboard v1]
+        saveToLocalStorage();
+        recordState();
+    }
+
+    function readInputs(gameIndex) {
+        teams.forEach(team => {
+            const nameInput = document.querySelector(`.team-name-input[data-team-id="${team.id}"]`);
+            if (nameInput) team.name = nameInput.value.trim() || 'Un-named Team';
+
+            const pInput = document.querySelector(`.place-input[data-team-id="${team.id}"][data-game-index="${gameIndex}"]`);
+            const kInput = document.querySelector(`.kill-input[data-team-id="${team.id}"][data-game-index="${gameIndex}"]`);
+
+            const pVal = pInput ? parseInt(pInput.value, 10) : 0;
+            const kVal = kInput ? parseInt(kInput.value, 10) : 0;
+
+            if (!team.games[gameIndex]) team.games[gameIndex] = { placement: 0, kill: 0 };
+            team.games[gameIndex].placement = isNaN(pVal) || pVal < 0 ? 0 : pVal;
+            team.games[gameIndex].kill = isNaN(kVal) || kVal < 0 ? 0 : kVal;
+        });
+    }
+
+    // Calculations
+    // [v2.0 Dynamic Match] เดิมวนลูปคำนวณคะแนนคงที่ 6 เกม ตอนนี้วนตาม totalMatches จริง
+    // และ .slice(0, totalMatches) กันไม่ให้เกมที่ถูกซ่อน (เพราะลดจำนวนเกม) ถูกนำมานับคะแนนซ้ำ
+    function calculateTotals() {
+        const confirmedGamesCount = matchConfirmed.slice(0, totalMatches).filter(c => c).length;
+
+        teams.forEach(team => {
+            let pSum = 0;
+            let kSum = 0;
+            let booyah = 0;
+            let top3 = 0;
+            let top5 = 0;
+            let totalRankSum = 0;
+            // [v2.0.2 Direct-Points] ช่อง Placement ตอนนี้คือ "แต้มที่จะได้" กรอกตรง ๆ ไม่ผ่านตาราง getPlacementScore() อีกต่อไป
+            // ผู้กรอกต้องอ้างอิงตารางทางการเอง (เช่น อันดับ 1 = 12, อันดับ 2 = 9, ... อันดับ 11-12 = 0) แล้วพิมพ์ค่าแต้มนั้นเข้าไป
+            // bestPlacement = แต้มสูงสุดที่เคยทำได้ในเกมใดเกมหนึ่ง (เลขมาก = ดีกว่า, -1 = ยังไม่เคยลงเล่น)
+            // lastMatchPlacement = แต้มที่ทำได้ในเกม "ล่าสุดที่ยืนยันแล้ว" ใช้เป็น fallback ตัดสินเสมอ
+            let bestPlacement = -1;
+            let lastConfirmedIndex = -1;
+            let lastMatchPlacement = -1;
+
+            for (let i = 0; i < totalMatches; i++) {
+                if (matchConfirmed[i]) {
+                    const game = team.games[i] || { placement: 0, kill: 0 };
+                    const place = Number(game.placement) || 0;
+                    const kill = Number(game.kill) || 0;
+
+                    pSum += place; // [v2.0.2] เอาแต้มที่กรอกมาบวกตรง ๆ ไม่แปลงผ่านตาราง
+                    kSum += kill;
+                    totalRankSum += place;
+
+                    // [v2.0.2] 12 แต้ม = แต้มสูงสุดตามตารางทางการ (อันดับ 1/Booyah) จึงใช้ตรวจนับ Booyah
+                    if (place === 12) booyah++;
+                    // [v2.0.2] เทียบเกณฑ์แต้มแทนอันดับ: อันดับ 3 ทางการ = 8 แต้ม, อันดับ 5 ทางการ = 6 แต้ม
+                    if (place >= 8) top3++;
+                    if (place >= 6) top5++;
+                    if (place > bestPlacement) bestPlacement = place;
+                    if (i > lastConfirmedIndex) {
+                        lastConfirmedIndex = i;
+                        lastMatchPlacement = place;
+                    }
+                }
+            }
+
+            team.totalPlace = pSum;
+            team.totalKill = kSum;
+            team.totalScore = pSum + kSum;
+            team.booyahCount = booyah;
+            team.top3Count = top3;
+            team.top5Count = top5;
+            team.bestPlacement = bestPlacement;
+            team.lastMatchPlacement = lastMatchPlacement;
+
+            team.avgRank = confirmedGamesCount > 0 ? (totalRankSum / confirmedGamesCount) : 0;
+            team.avgKill = confirmedGamesCount > 0 ? (kSum / confirmedGamesCount) : 0;
+        });
+    }
+
+    // Tie-break Rules
+    // [v2.0.2] อ้างอิงกฎ Tie-breaker มาตรฐานโปรลีก Free Fire (ตามภาพที่เนสส่งมา) ปรับให้ใช้ "แต้ม" แทน "อันดับ" แล้ว (เลขมาก = ดีกว่าเสมอ)
+    // 1) totalScore  2) เคยทำแต้มสูงสุดในเกมใดเกมหนึ่ง  3) จำนวน Booyah  4) Kill รวม  5) แต้มในเกมล่าสุด
+    // เกณฑ์เดิม (totalPlace รวม / top3Count / คะแนนเกมล่าสุดย้อนหลัง / ชื่อทีม) เก็บไว้เป็น fallback ต่อท้าย
+    function sortTeams() {
+        teams.sort((a, b) => {
+            if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
+
+            // [v2.0.2 Tie-break #2] เคยทำแต้มสูงสุดในเกมใดเกมหนึ่ง (เลขมาก = ดีกว่า)
+            if (b.bestPlacement !== a.bestPlacement) return b.bestPlacement - a.bestPlacement;
+
+            // [v2.0.1 Tie-break #3] จำนวน Booyah มากกว่าชนะ
+            if (b.booyahCount !== a.booyahCount) return b.booyahCount - a.booyahCount;
+
+            // [v2.0.1 Tie-break #4] Kill รวมมากกว่าชนะ
+            if (b.totalKill !== a.totalKill) return b.totalKill - a.totalKill;
+
+            // [v2.0.2 Tie-break #5] แต้มในเกมล่าสุด (ที่ยืนยันแล้ว) มากกว่าชนะ; ทีมที่ยังไม่เคยลงเล่นจะถูกจัดไว้ท้ายเกณฑ์นี้
+            if (b.lastMatchPlacement !== a.lastMatchPlacement) return b.lastMatchPlacement - a.lastMatchPlacement;
+
+            // --- Fallback: เกณฑ์เดิมที่เหลือ (ใช้เฉพาะกรณีเสมอกันทุกข้อข้างต้น) ---
+            if (b.totalPlace !== a.totalPlace) return b.totalPlace - a.totalPlace;
+            if (b.top3Count !== a.top3Count) return b.top3Count - a.top3Count;
+            
+            // [v2.0.2 Direct-Points] Tie-break ระดับสุดท้าย: ไล่คะแนนย้อนหลังจาก "เกมสุดท้ายจริง" โดยเอาแต้มที่กรอกบวก Kill ตรง ๆ (ไม่ผ่านตาราง)
+            for (let i = totalMatches - 1; i >= 0; i--) {
+                if (matchConfirmed[i]) {
+                    const gA = a.games[i] || { placement: 0, kill: 0 };
+                    const gB = b.games[i] || { placement: 0, kill: 0 };
+                    const scoreA = (gA.placement || 0) + (gA.kill || 0);
+                    const scoreB = (gB.placement || 0) + (gB.kill || 0);
+                    if (scoreB !== scoreA) return scoreB - scoreA;
+                }
+            }
+            return a.name.localeCompare(b.name, 'th');
+        });
+    }
+
+    // Render Table Body
+    // [v4.0 UI Refresh] เก็บว่าทีมไหนกำลังกางแถวผู้เล่นอยู่บ้าง (สถานะของเครื่องนี้เท่านั้น ไม่ sync ขึ้น Cloud)
+    const expandedTeamIds = new Set();
+
+    function toggleTeamExpand(teamId) {
+        if (expandedTeamIds.has(teamId)) expandedTeamIds.delete(teamId);
+        else expandedTeamIds.add(teamId);
+        applyExpandState(teamId);
+    }
+
+    function applyExpandState(teamId) {
+        const isOpen = expandedTeamIds.has(teamId);
+        const row = document.getElementById(`expand-row-${teamId}`);
+        const toggle = document.querySelector(`[data-action="toggle-expand"][data-team-id="${teamId}"]`);
+        const wrap = row ? row.querySelector('.team-expand-content-wrap') : null;
+        if (toggle) toggle.classList.toggle('is-open', isOpen);
+        if (row) row.classList.toggle('is-open', isOpen);
+        if (wrap) wrap.style.maxHeight = isOpen ? (wrap.scrollHeight + 'px') : '0px';
+    }
+
+    // [v4.0 UI Refresh] สร้าง HTML ตารางผู้เล่นย่อ (ชื่อ+รูป+Kill รายเกม+รวม) สำหรับแถวขยายของทีมหนึ่งๆ
+    // ใช้ class เดียวกับระบบเดิม (player-name-input / player-kill-input / input-score) เพื่อให้ผูกกับ
+    // event delegation และ logic คำนวณเดิมได้ทันทีโดยไม่ต้องเขียนใหม่
+    function renderTeamExpandContent(team) {
+        let gameHeaders = '';
+        for (let i = 0; i < totalMatches; i++) gameHeaders += `<th>G${i + 1}</th>`;
+
+        const rows = team.players.map(player => {
+            let cells = '';
+            for (let i = 0; i < totalMatches; i++) {
+                const isLocked = matchConfirmed[i] || isViewerMode;
+                cells += `
+                    <td>
+                        <input type="number" min="0" class="input-score player-kill-input"
+                            data-team-id="${team.id}" data-player-id="${player.id}" data-game-index="${i}"
+                            value="${player.kills[i] || ''}" ${isLocked ? 'disabled' : ''} placeholder="0">
+                    </td>`;
+            }
+
+            const avatarAttr = isViewerMode ? '' : `data-action="upload-player-photo" data-team-id="${team.id}" data-player-id="${player.id}" title="เปลี่ยนรูป"`;
+            const avatarHTML = player.photo
+                ? `<img src="${player.photo}" class="player-avatar-img" ${avatarAttr}>`
+                : `<span class="player-avatar-placeholder" ${avatarAttr}><i class="fa-solid fa-user"></i></span>`;
+
+            return `
+                <tr>
+                    <td class="pd-player-cell">
+                        ${avatarHTML}
+                        <input type="text" class="player-name-input" data-team-id="${team.id}" data-player-id="${player.id}"
+                            value="${player.name}" ${isViewerMode ? 'disabled' : ''}>
+                    </td>
+                    ${cells}
+                    <td class="pd-total-kill-cell">${player.totalKill}</td>
+                </tr>`;
+        }).join('');
+
+        return `
+            <div class="team-expand-content">
+                <table class="mini-player-table">
+                    <thead><tr><th>ผู้เล่น</th>${gameHeaders}<th>รวม Kill</th></tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>`;
+    }
+
+    function renderTable() {
+        const tbody = document.getElementById('table-body');
+        const searchTerm = (document.getElementById('search-input')?.value || '').toLowerCase();
+        tbody.innerHTML = '';
+
+        // [v4.0 UI Refresh] จำนวนคอลัมน์ทั้งหมดของตารางหลัก (ใช้ทำ colspan ของแถว Accordion ให้พอดีเสมอ)
+        const totalCols = 2 + (totalMatches * 2) + 4 + 1;
+
+        teams.forEach((team, index) => {
+            if (searchTerm && !team.name.toLowerCase().includes(searchTerm)) return;
+
+            const tr = document.createElement('tr');
+            tr.dataset.teamId = team.id; // [v4.0 UI Refresh] ใช้หาแถวนี้เพื่ออัปเดต Kill รวมแบบสดๆ จาก Accordion
+
+            let rankClass = '';
+            let medalHTML = `#${index + 1}`;
+            if (index === 0) { rankClass = 'row-rank-1'; medalHTML = '<span class="rank-medal rank-1">🥇</span>'; }
+            else if (index === 1) { rankClass = 'row-rank-2'; medalHTML = '<span class="rank-medal rank-2">🥈</span>'; }
+            else if (index === 2) { rankClass = 'row-rank-3'; medalHTML = '<span class="rank-medal rank-3">🥉</span>'; }
+
+            tr.className = rankClass;
+
+            // [v2.0 Dynamic Match] สร้างช่อง input Placement/Kill ต่อแถวตามจำนวนเกมที่เลือกจริง (totalMatches)
+            let gamesHTML = '';
+            for (let i = 0; i < totalMatches; i++) {
+                const isLocked = matchConfirmed[i] || isViewerMode;
+                const g = team.games[i] || { placement: 0, kill: 0 };
+
+                gamesHTML += `
+                    <td>
+                        <!-- [v2.0.2 Direct-Points] max=12 เพราะช่องนี้คือ "แต้ม" ตรงๆ ตามตารางทางการ (สูงสุด 12 = อันดับ 1) ไม่ใช่อันดับทีมอีกต่อไป -->
+                        <input type="number" min="0" max="12" 
+                            class="input-score place-input" 
+                            data-team-id="${team.id}" 
+                            data-game-index="${i}" 
+                            value="${g.placement || ''}" 
+                            ${isLocked ? 'disabled' : ''} 
+                            placeholder="0">
+                    </td>
+                    <td>
+                        <!-- [Player Dashboard v1] Kill ทีมตอนนี้คำนวณจาก Kill ผู้เล่น 4 คนอัตโนมัติ (calculateTeamKillFromPlayers)
+                             จึงปิดให้พิมพ์เองไม่ได้อีกต่อไป ค่ายังอ่าน/ใช้งานเหมือนเดิมทุกจุด (readInputs/validateGameInputs/calculateTotals) -->
+                        <input type="number" min="0" 
+                            class="input-score kill-input input-computed" 
+                            data-team-id="${team.id}" 
+                            data-game-index="${i}" 
+                            value="${g.kill || ''}" 
+                            disabled 
+                            title="คำนวณจาก Kill ผู้เล่นอัตโนมัติ (คลิกชื่อทีมเพื่อกางดู/แก้ไข)"
+                            placeholder="0">
+                    </td>
+                `;
+            }
+
+            const logoHTML = team.logo 
+                ? `<img src="${team.logo}" class="team-logo-img" data-action="upload-logo" data-team-id="${team.id}" title="เปลี่ยนโลโก้">`
+                : `<div class="team-logo-placeholder" data-action="upload-logo" data-team-id="${team.id}" title="อัปโหลดโลโก้"><i class="fa-solid fa-camera"></i></div>`;
+
+            // [v4.0 UI Refresh] คลิกชื่อทีมเพื่อกาง/หุบ Accordion ผู้เล่น — Viewer เห็นเป็นข้อความคลิกได้ตรงๆ
+            // Admin ยังแก้ชื่อทีมในช่อง input ได้ตามเดิม แล้วมีปุ่มลูกศรแยกไว้กดกาง/หุบต่างหาก กันชนกับตอนคลิกพิมพ์ชื่อ
+            const teamNameArea = isViewerMode
+                ? `<span class="team-name-toggle team-name-link" data-action="toggle-expand" data-team-id="${team.id}">
+                       <span>${team.name}</span><i class="fa-solid fa-chevron-down accordion-chevron"></i>
+                   </span>`
+                : `<input type="text" class="team-name-input" data-team-id="${team.id}" value="${team.name}">
+                   <span class="team-name-toggle admin-toggle" data-action="toggle-expand" data-team-id="${team.id}" title="ดู/แก้ไขรายชื่อผู้เล่น">
+                       <i class="fa-solid fa-chevron-down accordion-chevron"></i>
+                   </span>`;
+
+            tr.innerHTML = `
+                <td class="freeze-col-1">${medalHTML}</td>
+                <td class="freeze-col-2">
+                    <div class="team-cell">
+                        ${isViewerMode ? (team.logo ? `<img src="${team.logo}" class="team-logo-img">` : '') : logoHTML}
+                        ${teamNameArea}
+                    </div>
+                </td>
+                ${gamesHTML}
+                <td style="color: var(--accent-gold); font-weight: 800;">${team.booyahCount}</td>
+                <td class="val-place">${team.totalPlace}</td>
+                <td class="val-kill">${team.totalKill}</td>
+                <td class="val-total">${team.totalScore}</td>
+                <td class="col-action" style="${isViewerMode ? 'display:none;' : ''}">
+                    <button class="btn-del" data-action="delete-team" data-team-id="${team.id}" title="ลบทีม"><i class="fa-solid fa-trash"></i></button>
+                </td>
+            `;
+
+            tbody.appendChild(tr);
+
+            // [v4.0 UI Refresh] แถว Accordion (ซ่อนอยู่ก่อน กางออกด้วย applyExpandState)
+            const expandTr = document.createElement('tr');
+            expandTr.className = 'team-expand-row';
+            expandTr.id = `expand-row-${team.id}`;
+            expandTr.innerHTML = `
+                <td colspan="${totalCols}">
+                    <div class="team-expand-content-wrap">
+                        ${renderTeamExpandContent(team)}
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(expandTr);
+        });
+
+        if (!isViewerMode) renderMatchActionFooter();
+
+        // [v4.0 UI Refresh] คงสถานะกาง/หุบของแต่ละทีมไว้หลัง re-render (เช่นตอนมีอัปเดตจาก Cloud เข้ามา)
+        expandedTeamIds.forEach(id => applyExpandState(id));
+    }
+
+    // [v2.0 Dynamic Match] เดิมปุ่ม Confirm/Edit ต่อเกมเป็น HTML คงที่ 6 ปุ่ม
+    // ตอนนี้ล้างปุ่มเก่าแล้วสร้างใหม่ตาม totalMatches ทุกครั้งที่ renderTable() ถูกเรียก
+    function renderMatchActionFooter() {
+        const actionRow = document.getElementById('match-action-row');
+        while (actionRow.children.length > 2) actionRow.removeChild(actionRow.lastChild);
+
+        for (let i = 0; i < totalMatches; i++) {
+            const td = document.createElement('td');
+            td.colSpan = 2;
+
+            if (!matchConfirmed[i]) {
+                td.innerHTML = `
+                    <button class="btn-match-action btn-confirm" data-action="confirm-game" data-game-index="${i}">
+                        <i class="fa-solid fa-check"></i> ยืนยัน G${i + 1}
+                    </button>
+                `;
+            } else {
+                td.innerHTML = `
+                    <button class="btn-match-action btn-edit" data-action="unlock-game" data-game-index="${i}">
+                        <i class="fa-solid fa-pen-to-square"></i> แก้ไข G${i + 1}
+                    </button>
+                `;
+            }
+            actionRow.appendChild(td);
+        }
+
+        for (let i = 0; i < 5; i++) {
+            actionRow.appendChild(document.createElement('td'));
+        }
+    }
+
+    // [v2.0 Dynamic Match] "X / Y เกม" ใน Summary Card อ้างอิงจำนวนเกมที่เลือกจริง (totalMatches) แทนค่าคงที่ 6
+    function updateSummaryCards() {
+        const confirmedCount = matchConfirmed.slice(0, totalMatches).filter(status => status).length;
+        document.getElementById('stat-teams').innerText = teams.length;
+        document.getElementById('stat-games').innerText = `${confirmedCount} / ${totalMatches}`;
+
+        const totalBooyah = teams.reduce((sum, t) => sum + t.booyahCount, 0);
+        const totalTop3 = teams.reduce((sum, t) => sum + t.top3Count, 0);
+        const totalTop5 = teams.reduce((sum, t) => sum + t.top5Count, 0);
+        const totalKills = teams.reduce((sum, t) => sum + t.totalKill, 0);
+        const totalScore = teams.reduce((sum, t) => sum + t.totalScore, 0);
+
+        const globalAvgRank = teams.length > 0 ? (teams.reduce((sum, t) => sum + t.avgRank, 0) / teams.length).toFixed(1) : "0.0";
+        const globalAvgKill = confirmedCount > 0 ? (totalKills / (teams.length * confirmedCount || 1)).toFixed(1) : "0.0";
+
+        document.getElementById('stat-booyah').innerText = totalBooyah;
+        document.getElementById('stat-top35').innerText = `${totalTop3} / ${totalTop5}`;
+        document.getElementById('stat-avgrank').innerText = globalAvgRank;
+        document.getElementById('stat-kills').innerText = `${totalKills} (${globalAvgKill})`;
+        document.getElementById('stat-score').innerText = totalScore;
+    }
+
+    // ============================================================
+    // [Player Dashboard v1] เริ่มส่วนใหม่ทั้งหมด — ไม่แตะ/ไม่เรียกจากฟังก์ชันคำนวณ Leaderboard เดิมเลย
+    // (calculateTotals/sortTeams ของทีมยังใช้ team.games[].kill เหมือนเดิมทุกอย่าง แค่ตอนนี้ค่านั้น
+    //  ถูก sync มาจาก player kills แทนที่จะให้แอดมินพิมพ์เอง)
+    // ============================================================
+
+    // 6. Sync Team Kill: รวม Kill ผู้เล่น 4 คนของทีมนั้นในเกมนั้น แล้วเขียนกลับเข้า team.games[gameIndex].kill
+    function calculateTeamKillFromPlayers(team, gameIndex) {
+        const sum = team.players.reduce((s, p) => s + (Number(p.kills[gameIndex]) || 0), 0);
+        if (!team.games[gameIndex]) team.games[gameIndex] = { placement: 0, kill: 0 };
+        team.games[gameIndex].kill = sum;
+
+        // อัปเดตช่อง Kill (disabled) ในตารางหลักให้เห็นทันที ถ้าแถวนั้นกำลังแสดงอยู่บนจอ
+        const killCell = document.querySelector(`.kill-input[data-team-id="${team.id}"][data-game-index="${gameIndex}"]`);
+        if (killCell) killCell.value = sum || '';
+        return sum;
+    }
+
+    function syncAllTeamKillsFromPlayers() {
+        teams.forEach(team => {
+            for (let i = 0; i < 12; i++) calculateTeamKillFromPlayers(team, i);
+        });
+    }
+
+    // Card 2: คำนวณ Kill รวมของผู้เล่นแต่ละคน (นับเฉพาะเกมที่ยืนยันแล้ว ให้สอดคล้องกับ Leaderboard)
+    function calculatePlayerKills() {
+        teams.forEach(team => {
+            team.players.forEach(player => {
+                let sum = 0;
+                for (let i = 0; i < totalMatches; i++) {
+                    if (matchConfirmed[i]) sum += Number(player.kills[i]) || 0;
+                }
+                player.totalKill = sum;
+            });
+        });
+    }
+
+    // Card 3: หา MVP ทั้งทัวร์นาเมนต์ (Total Kill สูงสุด) พร้อม Tie-break ตามสเปค
+    // 1) Total Kill  2) Kill เกมล่าสุด(ใหม่สุด)ย้อนไปเกมแรก ถ้ายังเท่ากันหมด -> Co-MVP
+    function calculateMVP() {
+        const allPlayers = [];
+        teams.forEach(team => {
+            team.players.forEach(player => {
+                allPlayers.push({ player, team });
+            });
+        });
+
+        if (allPlayers.length === 0) return [];
+        const maxKill = Math.max(...allPlayers.map(p => p.player.totalKill));
+        if (maxKill <= 0) return []; // [4. ไม่มีข้อมูล]
+
+        let candidates = allPlayers.filter(p => p.player.totalKill === maxKill);
+        if (candidates.length === 1) return candidates;
+
+        // Tie-break: ไล่ Kill ย้อนจากเกมล่าสุดที่ยืนยันแล้วไปเกมแรก ทีละเกมจนกว่าจะแยกผู้ชนะได้
+        for (let i = totalMatches - 1; i >= 0; i--) {
+            if (!matchConfirmed[i]) continue;
+            const maxAtGame = Math.max(...candidates.map(c => Number(c.player.kills[i]) || 0));
+            const narrowed = candidates.filter(c => (Number(c.player.kills[i]) || 0) === maxAtGame);
+            if (narrowed.length < candidates.length) candidates = narrowed;
+            if (candidates.length === 1) return candidates;
+        }
+        return candidates; // ยังเท่ากันหมดทุกเกม -> Co-MVP
+    }
+
+    // Helper: count-up แบบเบาๆ ไม่ใช้ library ภายนอก
+    function animateNumberTo(el, newValue) {
+        const oldValue = parseInt(el.dataset.rawValue || el.innerText, 10) || 0;
+        const target = Number(newValue) || 0;
+        if (oldValue === target) { el.innerText = target; return; }
+        const duration = 400;
+        const start = performance.now();
+        function step(now) {
+            const progress = Math.min((now - start) / duration, 1);
+            const current = Math.round(oldValue + (target - oldValue) * progress);
+            el.innerText = current;
+            if (progress < 1) requestAnimationFrame(step);
+            else el.dataset.rawValue = target;
+        }
+        requestAnimationFrame(step);
+    }
+
+    function updatePlayerSummary() {
+        const totalPlayers = teams.length * PLAYERS_PER_TEAM;
+        const totalKillAll = teams.reduce((sum, t) => sum + t.players.reduce((s, p) => s + p.totalKill, 0), 0);
+
+        const elPlayers = document.getElementById('pd-stat-players');
+        const elKills = document.getElementById('pd-stat-totalkill');
+        if (elPlayers) animateNumberTo(elPlayers, totalPlayers);
+        if (elKills) animateNumberTo(elKills, totalKillAll);
+
+        const mvpNameEl = document.getElementById('pd-mvp-name');
+        const mvpDetailEl = document.getElementById('pd-mvp-detail');
+        const mvpPrizeEl = document.getElementById('pd-mvp-prize');
+        const mvpCard = document.getElementById('pd-mvp-card');
+        if (!mvpNameEl) return;
+
+        const mvpList = calculateMVP();
+        mvpCard.classList.remove('pd-fade-update');
+        void mvpCard.offsetWidth; // force reflow เพื่อให้ animation เล่นซ้ำได้ทุกครั้งที่ค่าเปลี่ยน
+        mvpCard.classList.add('pd-fade-update');
+
+        if (mvpList.length === 0) {
+            // [4. ไม่มีข้อมูล]
+            mvpNameEl.innerText = '-';
+            mvpDetailEl.innerText = '0 Kills';
+            mvpPrizeEl.style.display = 'none';
+        } else if (mvpList.length === 1) {
+            const { player, team } = mvpList[0];
+            mvpNameEl.innerText = player.name;
+            mvpDetailEl.innerText = `${player.totalKill} Kills · ${team.name}`;
+            mvpPrizeEl.style.display = 'block';
+        } else {
+            // [3. Co-MVP]
+            mvpNameEl.innerText = 'Co-MVP';
+            mvpDetailEl.innerText = mvpList.map(m => `${m.player.name} (${m.player.totalKill})`).join(', ');
+            mvpPrizeEl.style.display = 'block';
+        }
+    }
+
+    // 5. Player Table: ตาราง Player | Team | Game1..GameN | Total Kill
+    function renderPlayerTable() {
+        const thead = document.getElementById('player-table-head');
+        const tbody = document.getElementById('player-table-body');
+        if (!thead || !tbody) return;
+
+        let gameHeaders = '';
+        for (let i = 0; i < totalMatches; i++) gameHeaders += `<th>Game ${i + 1}</th>`;
+        thead.innerHTML = `<tr><th class="freeze-col-1">Player</th><th class="freeze-col-2">Team</th>${gameHeaders}<th>Total Kill</th></tr>`;
+
+        tbody.innerHTML = '';
+        teams.forEach(team => {
+            team.players.forEach((player, pIdx) => {
+                const tr = document.createElement('tr');
+                let cellsHTML = '';
+                for (let i = 0; i < totalMatches; i++) {
+                    const isLocked = matchConfirmed[i] || isViewerMode; // [5.] Confirm แล้ว Lock, Unlock แล้วแก้ไขได้ (ใช้ state เดียวกับตารางหลัก)
+                    cellsHTML += `
+                        <td>
+                            <input type="number" min="0" class="input-score player-kill-input"
+                                data-team-id="${team.id}" data-player-id="${player.id}" data-game-index="${i}"
+                                value="${player.kills[i] || ''}" ${isLocked ? 'disabled' : ''} placeholder="0">
+                        </td>`;
+                }
+                tr.innerHTML = `
+                    <td class="freeze-col-1">
+                        <input type="text" class="player-name-input" data-team-id="${team.id}" data-player-id="${player.id}"
+                            value="${player.name}" ${isViewerMode ? 'disabled' : ''}>
+                    </td>
+                    <td class="freeze-col-2 pd-team-label" data-team-id-ref="${team.id}">${team.name}</td>
+                    ${cellsHTML}
+                    <td class="pd-total-kill-cell">${player.totalKill}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        });
+    }
+
+    // ฟังก์ชันหลักที่ต้องเรียกทุกครั้งที่ข้อมูลเปลี่ยน (ดู trigger list ในสเปค ข้อ 9)
+    // [Cloud v3.0] เพิ่ม skipTableRender (ไม่บังคับ, ค่าเริ่มต้น false) เพื่อให้ handleCloudUpdate เรียกแบบข้าม
+    // การวาดตาราง input ใหม่ได้ ตอนมีอัปเดตจาก Cloud เข้ามาระหว่างที่ผู้ใช้กำลังพิมพ์อยู่พอดี
+    function renderPlayerDashboard(skipTableRender = false) {
+        ensurePlayersData();
+        syncAllTeamKillsFromPlayers();
+        calculatePlayerKills();
+        if (!skipTableRender) renderPlayerTable();
+        updatePlayerSummary();
+    }
+    // [Player Dashboard v1] จบส่วนคำนวณ/เรนเดอร์ ============================
+
+    // LocalStorage & Auto Backup
+    // [v2.0 Dynamic Match] เพิ่ม totalMatches เข้าไปใน payload ที่บันทึก/สำรองข้อมูล
+    // เพื่อให้ระบบจำจำนวนเกมที่เลือกไว้ได้เมื่อโหลดหน้าเว็บใหม่ หรือกู้คืนจาก backup
+    function getSystemStatePayload() {
+        return {
+            totalMatches: totalMatches,
+            teams: teams,
+            matchConfirmed: matchConfirmed,
+            tournamentSettings: tournamentSettings,
+            mapImages: mapImages, // [v5.0]
+            newsContent: newsContent, // [v5.0]
+            settings: { version: '3.0', updatedAt: new Date().toISOString() }
+        };
+    }
+
+    function saveToLocalStorage(triggerAutoBackup = true) {
+        try {
+            const payload = getSystemStatePayload();
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+            if (triggerAutoBackup) {
+                pushAutoBackup(payload);
+            }
+            scheduleCloudSync(); // [Cloud v3.0] ผลักสถานะล่าสุดขึ้น Firestore (ทุกจุดที่เคยเรียก saveToLocalStorage เดิม)
+        } catch (e) {
+            console.error('Error saving to localStorage:', e);
+        }
+    }
+
+    // [Cloud v3.0] รวมการเขียนขึ้น Firestore ที่เกิดถี่ๆ (เช่น พิมพ์ชื่อทีม/คิลทีละตัวอักษร) ให้เหลือ 1 ครั้ง
+    // หลังหยุดพิมพ์ ~0.8 วิ กัน Quota การเขียนของ Firestore หมดเร็วเกินไปโดยไม่จำเป็น
+    // และซิงก์เฉพาะตอนเป็น Admin เท่านั้น — Viewer ไม่มีสิทธิ์เขียนขึ้น Cloud (กันเขียนทับ/สิ้นเปลือง Quota ฟรีๆ)
+    let cloudSyncDebounceTimer = null;
+    function scheduleCloudSync() {
+        if (isViewerMode || !window.cloudSaveState) return;
+        clearTimeout(cloudSyncDebounceTimer);
+        cloudSyncDebounceTimer = setTimeout(() => {
+            window.cloudSaveState(getSystemStatePayload());
+        }, 800);
+    }
+
+    function pushAutoBackup(payload) {
+        try {
+            let backups = JSON.parse(localStorage.getItem(AUTO_BACKUP_KEY) || '[]');
+            backups.unshift({
+                timestamp: new Date().toISOString(),
+                data: payload
+            });
+            if (backups.length > 10) backups = backups.slice(0, 10);
+            localStorage.setItem(AUTO_BACKUP_KEY, JSON.stringify(backups));
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    function startAutoSaveInterval() {
+        setInterval(() => {
+            saveToLocalStorage(true);
+        }, 10000);
+    }
+
+    function loadFromLocalStorage() {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                // [v2.0 Dynamic Match] ดึงจำนวนเกมที่บันทึกไว้กลับมา (fallback = 6 สำหรับข้อมูลเก่าก่อน v2.0 ที่ยังไม่มี field นี้)
+                totalMatches = parsed.totalMatches || 6;
+                teams = parsed.teams && parsed.teams.length > 0 ? parsed.teams : generateDefaultTeams();
+                matchConfirmed = parsed.matchConfirmed || Array(12).fill(false);
+                tournamentSettings = parsed.tournamentSettings || tournamentSettings;
+                mapImages = parsed.mapImages || []; // [v5.0]
+                newsContent = parsed.newsContent || ''; // [v5.0]
+                // [v2.0 Dynamic Match] sync ค่า dropdown ให้ตรงกับ totalMatches ที่โหลดมา
+                document.getElementById('select-total-matches').value = totalMatches;
+            } catch (e) {
+                teams = generateDefaultTeams();
+                matchConfirmed = Array(12).fill(false);
+            }
+        } else {
+            teams = generateDefaultTeams();
+            matchConfirmed = Array(12).fill(false);
+        }
+    }
+
+    // Backup & Restore
+    function backupJSON() {
+        const backupData = {
+            version: '3.0',
+            exportedAt: new Date().toLocaleString('th-TH'),
+            totalMatches: totalMatches,
+            teamCount: teams.length,
+            confirmedGames: matchConfirmed,
+            tournamentSettings: tournamentSettings,
+            teams: teams
+        };
+
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", `FF_Leaderboard_Backup_${Date.now()}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+    }
+
+    function handleJSONFileSelect(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const parsed = JSON.parse(e.target.result);
+                if (!parsed.teams || !Array.isArray(parsed.teams)) return alert('ไฟล์ JSON ไม่ถูกต้อง');
+                pendingRestoreData = parsed;
+                showRestorePreviewModal(parsed);
+            } catch (err) {
+                alert('เกิดข้อผิดพลาดในการอ่านไฟล์ JSON');
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    function showRestorePreviewModal(data) {
+        const modal = document.getElementById('restore-modal');
+        const preview = document.getElementById('modal-preview-content');
+        const confirmedGamesCount = (data.confirmedGames || data.matchConfirmed || []).filter(c => c).length;
+        
+        preview.innerHTML = `
+            <p><strong>วันที่ Export/Backup:</strong> ${data.exportedAt || '-'}</p>
+            <p><strong>ชื่อทัวร์นาเมนต์:</strong> ${(data.tournamentSettings && data.tournamentSettings.name) || '-'}</p>
+            <p><strong>จำนวนเกมทั้งหมด:</strong> ${data.totalMatches || 6} เกม</p>
+            <p><strong>จำนวนทีม:</strong> ${data.teams.length} ทีม</p>
+            <p><strong>เกมที่ ยืนยันแล้ว:</strong> ${confirmedGamesCount} เกม</p>
+            <p style="margin-top: 10px; color: var(--kill-color);">⚠️ การ Restore จะเขียนทับข้อมูลปัจจุบันทั้งหมด ท่านต้องการดำเนินการต่อหรือไม่?</p>
+        `;
+        modal.classList.add('active');
+    }
+
+    function executeRestore() {
+        if (!pendingRestoreData) return;
+        totalMatches = pendingRestoreData.totalMatches || 6;
+        teams = pendingRestoreData.teams;
+        matchConfirmed = pendingRestoreData.confirmedGames || pendingRestoreData.matchConfirmed || Array(12).fill(false);
+        if (pendingRestoreData.tournamentSettings) {
+            tournamentSettings = pendingRestoreData.tournamentSettings;
+        }
+        
+        document.getElementById('select-total-matches').value = totalMatches;
+        
+        calculateTotals();
+        sortTeams();
+        renderHeaderUI();
+        renderTableHeader();
+        renderTable();
+        updateSummaryCards();
+        renderPlayerDashboard(); // [Player Dashboard v1]
+        saveToLocalStorage();
+        recordState();
+
+        document.getElementById('restore-modal').classList.remove('active');
+        pendingRestoreData = null;
+        alert('Restore ข้อมูลเรียบร้อยแล้ว!');
+    }
+
+    // Auto Backups Modal
+    function showAutoBackupsModal() {
+        const modal = document.getElementById('auto-backups-modal');
+        const listEl = document.getElementById('auto-backups-list');
+        const backups = JSON.parse(localStorage.getItem(AUTO_BACKUP_KEY) || '[]');
+
+        if (backups.length === 0) {
+            listEl.innerHTML = '<p style="color: var(--text-muted); text-align: center;">ยังไม่มีข้อมูล Auto Backup</p>';
+        } else {
+            listEl.innerHTML = backups.map((b, idx) => `
+                <div style="background: var(--bg-dark); padding: 12px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong style="color: var(--accent-gold);">#${idx + 1} - ${new Date(b.timestamp).toLocaleString('th-TH')}</strong>
+                        <div style="font-size:0.8rem; color: var(--text-muted);">ทีม: ${b.data.teams.length} | เกม: ${b.data.totalMatches}</div>
+                    </div>
+                    <button class="btn btn-gold" onclick="restoreAutoBackupIndex(${idx})">Restore</button>
+                </div>
+            `).join('');
+        }
+        modal.classList.add('active');
+    }
+
+    window.restoreAutoBackupIndex = function(index) {
+        const backups = JSON.parse(localStorage.getItem(AUTO_BACKUP_KEY) || '[]');
+        if (backups[index]) {
+            pendingRestoreData = backups[index].data;
+            document.getElementById('auto-backups-modal').classList.remove('active');
+            showRestorePreviewModal(pendingRestoreData);
+        }
+    };
+
+    // Export PNG
+    function captureAndDownloadPNG(elementHTML, filename) {
+        const container = document.getElementById('export-container');
+        container.innerHTML = elementHTML;
+
+        html2canvas(container, {
+            width: 1920,
+            height: 1080,
+            backgroundColor: null,
+            scale: 1,
+            useCORS: true
+        }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            container.innerHTML = '';
+        });
+    }
+
+    function exportPNGTable() {
+        const tableHTML = document.getElementById('leaderboard-table').outerHTML;
+        const tourName = tournamentSettings.name || 'FREE FIRE BR TOURNAMENT LEADERBOARD';
+        const renderBox = `
+            <div style="width: 1800px; padding: 30px; background: rgba(18, 20, 28, 0.95); border-radius: 20px; border: 2px solid #ffb703; box-shadow: 0 0 40px rgba(0,0,0,0.8);">
+                ${tournamentSettings.logo ? `<img src="${tournamentSettings.logo}" style="max-height:80px; display:block; margin:0 auto 10px;">` : ''}
+                <h1 style="color: #ffb703; text-align: center; font-size: 2.5rem; margin-bottom: 20px;">${tourName}</h1>
+                ${tableHTML}
+            </div>
+        `;
+        captureAndDownloadPNG(renderBox, `FF_Leaderboard_${Date.now()}.png`);
+    }
+
+    function exportPNGTop3() {
+        const top3 = teams.slice(0, 3);
+        const medals = ['🥇 BOOYAH KING', '🥈 RUNNER UP', '🥉 3RD PLACE'];
+        const colors = ['#ffe600', '#e2e8f0', '#b45309'];
+
+        let cardsHTML = top3.map((t, idx) => `
+            <div style="flex: 1; background: rgba(24, 26, 36, 0.95); border: 2px solid ${colors[idx]}; border-radius: 20px; padding: 30px; text-align: center; color: #fff;">
+                ${t.logo ? `<img src="${t.logo}" style="width:70px; height:70px; border-radius:50%; object-fit:cover; margin-bottom:10px;">` : ''}
+                <div style="font-size: 2rem; font-weight: 900; color: ${colors[idx]}; margin-bottom: 15px;">${medals[idx]}</div>
+                <div style="font-size: 2.5rem; font-weight: 800; margin-bottom: 20px;">${t.name}</div>
+                <div style="font-size: 1.2rem; color: #9ca3af;">คะแนนรวม: <span style="color:#4ade80; font-size: 2rem; font-weight:900;">${t.totalScore}</span></div>
+                <div style="font-size: 1.1rem; color: #9ca3af; margin-top: 10px;">Booyah: <span style="color:#ffb703; font-weight:800;">${t.booyahCount}</span> | Kills: <span style="color:#f87171; font-weight:800;">${t.totalKill}</span></div>
+            </div>
+        `).join('');
+
+        const renderBox = `
+            <div style="width: 1800px; padding: 40px; background: rgba(10, 11, 14, 0.9); border-radius: 24px; text-align: center;">
+                <h1 style="color: #ffb703; font-size: 3rem; font-weight: 900; margin-bottom: 40px;">TOP 3 LEADERBOARD</h1>
+                <div style="display: flex; gap: 30px; justify-content: center;">${cardsHTML}</div>
+            </div>
+        `;
+        captureAndDownloadPNG(renderBox, `FF_Top3_${Date.now()}.png`);
+    }
+
+    function exportPNGMVP() {
+        if (teams.length === 0) return;
+        const mvp = [...teams].sort((a, b) => b.totalKill - a.totalKill || b.totalScore - a.totalScore)[0];
+
+        const renderBox = `
+            <div style="width: 1200px; padding: 50px; background: rgba(18, 20, 28, 0.95); border: 4px solid #f87171; border-radius: 30px; text-align: center; color: #fff; box-shadow: 0 0 50px rgba(248, 113, 113, 0.3);">
+                ${mvp.logo ? `<img src="${mvp.logo}" style="width:100px; height:100px; border-radius:50%; object-fit:cover; margin-bottom:15px;">` : ''}
+                <div style="font-size: 4rem; color: #f87171; font-weight: 900; margin-bottom: 10px;">MOST KILLS MVP</div>
+                <div style="font-size: 1.5rem; color: #9ca3af; margin-bottom: 30px;">ผู้เล่น/ทีมที่ทำ Kill สูงสุดประจำการแข่งขัน</div>
+                <div style="font-size: 4.5rem; font-weight: 900; color: #ffb703; margin-bottom: 20px;">${mvp.name}</div>
+                <div style="font-size: 6rem; font-weight: 900; color: #f87171;">${mvp.totalKill} <span style="font-size: 2rem; color: #fff;">KILLS</span></div>
+                <div style="font-size: 1.5rem; color: #4ade80; margin-top: 20px; font-weight: 700;">คะแนนรวมทั้งสิ้น: ${mvp.totalScore} PTS</div>
+            </div>
+        `;
+        captureAndDownloadPNG(renderBox, `FF_MVP_${Date.now()}.png`);
+    }
+
+    // Import CSV/Excel
+    function processImportedTeamNames(rawNames) {
+        const cleanedNames = rawNames.map(name => String(name || '').trim()).filter(name => name !== '');
+        if (cleanedNames.length === 0) return alert('ไม่พบข้อมูลชื่อทีมในไฟล์');
+
+        // Check Duplicates in File
+        const duplicatesInFile = cleanedNames.filter((item, index) => cleanedNames.indexOf(item) !== index);
+        if (duplicatesInFile.length > 0) {
+            alert(`เตือน: พบชื่อทีมซ้ำกันภายในไฟล์ที่นำเข้า: ${Array.from(new Set(duplicatesInFile)).join(', ')}`);
+        }
+
+        let mode = 'replace';
+        if (teams.length > 0) {
+            const userChoice = prompt(`พบบันทึกทีมเดิมอยู่ ${teams.length} ทีม\n1 = Replace All\n2 = Append\n3 = Cancel`, "1");
+            if (userChoice === '1') mode = 'replace';
+            else if (userChoice === '2') mode = 'append';
+            else return;
+        }
+
+        let finalTeamsList = [];
+        if (mode === 'replace') {
+            finalTeamsList = Array.from(new Set(cleanedNames));
+        } else {
+            const existingLower = teams.map(t => t.name.toLowerCase());
+            const newUnique = cleanedNames.filter(n => !existingLower.includes(n.toLowerCase()));
+            finalTeamsList = [...teams.map(t => t.name), ...Array.from(new Set(newUnique))];
+        }
+
+        if (finalTeamsList.length < 12 || finalTeamsList.length > 24) {
+            return alert(`การนำเข้าไม่สำเร็จ: จำนวนทีมทั้งหมดต้องอยู่ระหว่าง 12 - 24 ทีม (ปัจจุบัน: ${finalTeamsList.length} ทีม)`);
+        }
+
+        if (mode === 'replace') {
+            teams = finalTeamsList.map(name => createNewTeamObject(name));
+            matchConfirmed = Array(12).fill(false);
+        } else {
+            const existingLower = teams.map(t => t.name.toLowerCase());
+            cleanedNames.forEach(name => {
+                if (!existingLower.includes(name.toLowerCase())) {
+                    teams.push(createNewTeamObject(name));
+                }
+            });
+        }
+
+        calculateTotals();
+        sortTeams();
+        renderTable();
+        updateSummaryCards();
+        renderPlayerDashboard(); // [Player Dashboard v1]
+        saveToLocalStorage();
+        recordState();
+        alert('Import รายชื่อทีมสำเร็จ!');
+    }
+
+    function handleFileImport(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 });
+                const rawNames = [];
+                rows.forEach(row => {
+                    if (!row || row.length === 0) return;
+                    let nameVal = row.length === 1 ? row[0] : row[1];
+                    if (nameVal) {
+                        const str = String(nameVal).trim();
+                        const lower = str.toLowerCase();
+                        if (!['team name', 'teamname', 'ชื่อทีม', 'no', 'ลำดับ'].includes(lower)) {
+                            rawNames.push(str);
+                        }
+                    }
+                });
+                processImportedTeamNames(rawNames);
+            } catch (err) {
+                alert('เกิดข้อผิดพลาดในการอ่านไฟล์');
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    // Team Logo Upload
+    // [Cloud v3.0] อัปโหลดขึ้น Firebase Storage ก่อนเสมอ แล้วเก็บแค่ "ลิงก์ URL" (สตริงสั้นๆ) ไว้ใน team.logo
+    // แทนการฝัง base64 ตรงๆ เหมือนเดิม เพราะเอกสาร Firestore มีขีดจำกัดขนาด 1MB — ถ้าฝัง base64 ของโลโก้
+    // หลายๆ ทีมพร้อมกันจะชนขีดจำกัดนี้ง่ายมาก และทำให้การซิงก์คะแนนทั้งชุดล้มเหลวไปด้วย
+    async function handleTeamLogoUpload(teamId, file) {
+        if (!file) return;
+        const team = teams.find(t => t.id === teamId);
+        if (!team) return;
+
+        if (window.cloudUploadLogo) {
+            try {
+                const url = await window.cloudUploadLogo(file, `team_${teamId}`);
+                team.logo = url;
+                renderTable();
+                saveToLocalStorage();
+                recordState();
+                return;
+            } catch (err) {
+                console.error('อัปโหลดโลโก้ขึ้น Cloud Storage ไม่สำเร็จ กำลังใช้ไฟล์ในเครื่องแทน:', err);
+            }
+        }
+
+        // Fallback: ไม่มี Cloud Storage หรืออัปโหลดไม่สำเร็จ -> เก็บเป็น base64 ในเครื่องนี้เหมือนระบบเดิม
+        // หมายเหตุ: ถ้าไฟล์ใหญ่เกิน ~700KB การซิงก์คะแนนขึ้น Cloud อาจล้มเหลวไปด้วย (ดูแถบสถานะ LIVE ที่หัวเว็บ)
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            team.logo = e.target.result;
+            renderTable();
+            saveToLocalStorage();
+            recordState();
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // [v4.0 UI Refresh] อัปโหลดรูปโปรไฟล์ผู้เล่น (จากปุ่มรูปวงกลมใน Accordion) — ใช้ Firebase Storage เหมือนโลโก้ทีม
+    async function handlePlayerPhotoUpload(teamId, playerId, file) {
+        if (!file) return;
+        const team = teams.find(t => t.id === teamId);
+        if (!team) return;
+        const player = team.players.find(p => p.id === playerId);
+        if (!player) return;
+
+        if (window.cloudUploadLogo) {
+            try {
+                const url = await window.cloudUploadLogo(file, `player_${playerId}`);
+                player.photo = url;
+                renderTable();
+                saveToLocalStorage();
+                recordState();
+                return;
+            } catch (err) {
+                console.error('อัปโหลดรูปผู้เล่นขึ้น Cloud Storage ไม่สำเร็จ กำลังใช้ไฟล์ในเครื่องแทน:', err);
+            }
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            player.photo = e.target.result;
+            renderTable();
+            saveToLocalStorage();
+            recordState();
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // Tournament Settings Modal Logic
+    function openSettingsModal() {
+        document.getElementById('setting-name').value = tournamentSettings.name || '';
+        document.getElementById('setting-season').value = tournamentSettings.season || '';
+        document.getElementById('setting-league').value = tournamentSettings.league || '';
+        document.getElementById('setting-date').value = tournamentSettings.date || '';
+        document.getElementById('setting-map').value = tournamentSettings.map || '';
+        document.getElementById('setting-room').value = tournamentSettings.room || '';
+        document.getElementById('setting-round').value = tournamentSettings.round || '';
+        document.getElementById('setting-organizer').value = tournamentSettings.organizer || '';
+        
+        const statusEl = document.getElementById('tour-logo-status');
+        statusEl.innerText = tournamentSettings.logo ? 'มีไฟล์โลโก้ตั้งไว้แล้ว (อัปโหลดใหม่เพื่อเปลี่ยน)' : 'คลิกหรือลากวางไฟล์โลโก้ทัวร์นาเมนต์ที่นี่';
+
+        document.getElementById('settings-modal').classList.add('active');
+    }
+
+    function saveTournamentSettings() {
+        tournamentSettings.name = document.getElementById('setting-name').value.trim();
+        tournamentSettings.season = document.getElementById('setting-season').value.trim();
+        tournamentSettings.league = document.getElementById('setting-league').value.trim();
+        tournamentSettings.date = document.getElementById('setting-date').value.trim();
+        tournamentSettings.map = document.getElementById('setting-map').value.trim();
+        tournamentSettings.room = document.getElementById('setting-room').value.trim();
+        tournamentSettings.round = document.getElementById('setting-round').value.trim();
+        tournamentSettings.organizer = document.getElementById('setting-organizer').value.trim();
+
+        renderHeaderUI();
+        saveToLocalStorage();
+        recordState();
+        document.getElementById('settings-modal').classList.remove('active');
+    }
+
+    // Global Events
+    function setupGlobalEvents() {
+        // [v2.0 Dynamic Match] เมื่อผู้ใช้เปลี่ยนจำนวนเกมใน dropdown ให้คำนวณ/เรียงลำดับ/วาดตารางใหม่ทันที
+        // แล้วบันทึกค่าลง LocalStorage และ record undo/redo state
+        document.getElementById('select-total-matches')?.addEventListener('change', (e) => {
+            totalMatches = parseInt(e.target.value, 10);
+            calculateTotals();
+            sortTeams();
+            renderTableHeader();
+            renderTable();
+            updateSummaryCards();
+            renderPlayerDashboard(); // [Player Dashboard v1]
+            saveToLocalStorage();
+            recordState();
+        });
+
+        document.getElementById('btn-undo')?.addEventListener('click', undo);
+        document.getElementById('btn-redo')?.addEventListener('click', redo);
+
+        document.getElementById('leaderboard-table').addEventListener('click', (e) => {
+            // [v4.0 UI Refresh] คลิกชื่อทีม/ลูกศร -> กาง/หุบ Accordion ผู้เล่น (ทำงานได้ทั้ง Viewer และ Admin)
+            const expandTrigger = e.target.closest('[data-action="toggle-expand"]');
+            if (expandTrigger) {
+                toggleTeamExpand(expandTrigger.dataset.teamId);
+                return;
+            }
+
+            const targetBtn = e.target.closest('button[data-action]');
+            const logoTrigger = e.target.closest('[data-action="upload-logo"]');
+            // [v4.0 UI Refresh] คลิกรูปผู้เล่นใน Accordion -> เปิดอัปโหลดรูป (Admin เท่านั้น)
+            const photoTrigger = e.target.closest('[data-action="upload-player-photo"]');
+
+            if (logoTrigger && !isViewerMode) {
+                activeTeamLogoId = logoTrigger.dataset.teamId;
+                const logoInput = document.getElementById('input-file-logo');
+                logoInput.value = '';
+                logoInput.click();
+                return;
+            }
+
+            if (photoTrigger && !isViewerMode) {
+                activePlayerPhotoTarget = { teamId: photoTrigger.dataset.teamId, playerId: photoTrigger.dataset.playerId };
+                const photoInput = document.getElementById('input-file-player-photo');
+                photoInput.value = '';
+                photoInput.click();
+                return;
+            }
+
+            if (!targetBtn || isViewerMode) return;
+
+            const action = targetBtn.dataset.action;
+            if (action === 'confirm-game') confirmGame(parseInt(targetBtn.dataset.gameIndex, 10));
+            else if (action === 'unlock-game') unlockMatch(parseInt(targetBtn.dataset.gameIndex, 10));
+            else if (action === 'delete-team') deleteTeam(targetBtn.dataset.teamId);
+        });
+
+        document.getElementById('input-file-logo')?.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files[0] && activeTeamLogoId) {
+                handleTeamLogoUpload(activeTeamLogoId, e.target.files[0]);
+            }
+        });
+
+        // [v4.0 UI Refresh] อัปโหลดรูปผู้เล่น (จาก Accordion)
+        document.getElementById('input-file-player-photo')?.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files[0] && activePlayerPhotoTarget) {
+                handlePlayerPhotoUpload(activePlayerPhotoTarget.teamId, activePlayerPhotoTarget.playerId, e.target.files[0]);
+            }
+        });
+
+        document.getElementById('table-body').addEventListener('input', (e) => {
+            if (isViewerMode) return;
+            if (e.target.classList.contains('team-name-input')) {
+                const team = teams.find(t => t.id === e.target.dataset.teamId);
+                if (team) {
+                    team.name = e.target.value.trim() || 'Un-named Team';
+                    saveToLocalStorage(false);
+                    // [Player Dashboard v1] อัปเดตชื่อทีมที่โชว์ในตาราง Player + MVP Card ให้ตรงกันทันที (ไม่ต้อง re-render ทั้งก้อน)
+                    document.querySelectorAll(`.pd-team-label[data-team-id-ref="${team.id}"]`).forEach(el => el.innerText = team.name);
+                    updatePlayerSummary();
+                }
+            }
+            if (e.target.classList.contains('input-score')) {
+                e.target.classList.remove('input-error');
+            }
+
+            // [v4.0 UI Refresh] ผู้เล่นในแถว Accordion (ชื่อ / Kill รายเกม) — logic เดียวกับตาราง Player เดิม
+            if (e.target.classList.contains('player-name-input') || e.target.classList.contains('player-kill-input')) {
+                const teamId = e.target.dataset.teamId;
+                const playerId = e.target.dataset.playerId;
+                const team = teams.find(t => t.id === teamId);
+                if (!team) return;
+                const player = team.players.find(p => p.id === playerId);
+                if (!player) return;
+
+                if (e.target.classList.contains('player-name-input')) {
+                    player.name = e.target.value.trim() || 'Player';
+                    updatePlayerSummary();
+                    saveToLocalStorage(false);
+                } else {
+                    const gameIndex = parseInt(e.target.dataset.gameIndex, 10);
+                    let val = parseInt(e.target.value, 10);
+                    if (isNaN(val) || val < 0) val = 0;
+                    player.kills[gameIndex] = val;
+
+                    calculateTeamKillFromPlayers(team, gameIndex);
+                    calculatePlayerKills();
+                    updatePlayerSummary();
+
+                    const row = e.target.closest('tr');
+                    if (row) {
+                        const totalCell = row.querySelector('.pd-total-kill-cell');
+                        if (totalCell) totalCell.innerText = player.totalKill;
+                    }
+                    // อัปเดตช่อง "Kill รวม" ของทีมในแถวหลัก (เหนือ Accordion) ให้ตรงกันทันที
+                    const teamRow = document.querySelector(`tr[data-team-id="${team.id}"]`);
+                    if (teamRow) {
+                        const teamKillCell = teamRow.querySelector('.val-kill');
+                        if (teamKillCell) teamKillCell.innerText = team.totalKill;
+                    }
+                    saveToLocalStorage(false);
+                }
+            }
+        });
+
+        document.getElementById('table-body').addEventListener('change', (e) => {
+            if (e.target.classList.contains('team-name-input')) {
+                recordState();
+            }
+            if (e.target.classList.contains('player-name-input') || e.target.classList.contains('player-kill-input')) {
+                recordState();
+            }
+        });
+
+        // [Player Dashboard v1] Event Delegation สำหรับตาราง Player Kill (ชื่อผู้เล่น + Kill รายเกม)
+        document.getElementById('player-table-body')?.addEventListener('input', (e) => {
+            if (isViewerMode) return;
+            const teamId = e.target.dataset.teamId;
+            const playerId = e.target.dataset.playerId;
+            const team = teams.find(t => t.id === teamId);
+            if (!team) return;
+            const player = team.players.find(p => p.id === playerId);
+            if (!player) return;
+
+            if (e.target.classList.contains('player-name-input')) {
+                player.name = e.target.value.trim() || 'Player';
+                updatePlayerSummary(); // เผื่อผู้เล่นคนนี้เป็น MVP อยู่ ชื่อจะได้อัปเดตทันที
+                saveToLocalStorage(false);
+            } else if (e.target.classList.contains('player-kill-input')) {
+                const gameIndex = parseInt(e.target.dataset.gameIndex, 10);
+                let val = parseInt(e.target.value, 10);
+                if (isNaN(val) || val < 0) val = 0;
+                player.kills[gameIndex] = val;
+
+                // [6. Sync Team Kill] Kill ทีมเปลี่ยนทันทีตาม Kill ผู้เล่น โดยยังไม่ต้องกด Confirm
+                calculateTeamKillFromPlayers(team, gameIndex);
+                calculatePlayerKills();
+                updatePlayerSummary();
+
+                // อัปเดตช่อง Total Kill ในแถวเดียวกันแบบเบาๆ ไม่ re-render ทั้งตาราง
+                const row = e.target.closest('tr');
+                if (row) {
+                    const totalCell = row.querySelector('.pd-total-kill-cell');
+                    if (totalCell) totalCell.innerText = player.totalKill;
+                }
+                saveToLocalStorage(false);
+            }
+        });
+
+        document.getElementById('player-table-body')?.addEventListener('change', (e) => {
+            if (e.target.classList.contains('player-name-input') || e.target.classList.contains('player-kill-input')) {
+                recordState();
+            }
+        });
+
+        document.getElementById('search-input')?.addEventListener('input', renderTable);
+        document.getElementById('btn-add-team')?.addEventListener('click', addNewTeam);
+        document.getElementById('btn-reset-all')?.addEventListener('click', resetAllData);
+        document.getElementById('btn-export-excel')?.addEventListener('click', exportToExcel);
+
+        // Settings Modal Events
+        document.getElementById('btn-settings')?.addEventListener('click', openSettingsModal);
+        document.getElementById('btn-close-settings')?.addEventListener('click', () => {
+            document.getElementById('settings-modal').classList.remove('active');
+        });
+        document.getElementById('btn-save-settings')?.addEventListener('click', saveTournamentSettings);
+
+        const dropArea = document.getElementById('tournament-logo-drop');
+        dropArea?.addEventListener('click', () => {
+            const inp = document.createElement('input');
+            inp.type = 'file';
+            inp.accept = 'image/*';
+            // [Cloud v3.0] อัปโหลดขึ้น Firebase Storage ก่อน แล้วเก็บ URL แทน base64 (เหตุผลเดียวกับโลโก้ทีม)
+            inp.onchange = async (ev) => {
+                const file = ev.target.files[0];
+                if (!file) return;
+                const statusEl = document.getElementById('tour-logo-status');
+                statusEl.innerText = 'กำลังอัปโหลดโลโก้...';
+
+                if (window.cloudUploadLogo) {
+                    try {
+                        const url = await window.cloudUploadLogo(file, 'tournament_logo');
+                        tournamentSettings.logo = url;
+                        statusEl.innerText = 'อัปโหลดโลโก้ขึ้น Cloud สำเร็จ!';
+                        return;
+                    } catch (err) {
+                        console.error('อัปโหลดโลโก้ทัวร์นาเมนต์ขึ้น Cloud Storage ไม่สำเร็จ:', err);
+                    }
+                }
+
+                const r = new FileReader();
+                r.onload = (eRes) => {
+                    tournamentSettings.logo = eRes.target.result;
+                    statusEl.innerText = 'เลือกโลโก้เรียบร้อยแล้ว! (เก็บในเครื่องนี้เท่านั้น)';
+                };
+                r.readAsDataURL(file);
+            };
+            inp.click();
+        });
+
+        // Backup & Restore
+        document.getElementById('btn-backup-json')?.addEventListener('click', backupJSON);
+        document.getElementById('btn-restore-json')?.addEventListener('click', () => {
+            const input = document.getElementById('input-file-json');
+            input.value = ''; input.click();
+        });
+        document.getElementById('input-file-json')?.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files[0]) handleJSONFileSelect(e.target.files[0]);
+        });
+        document.getElementById('btn-modal-cancel')?.addEventListener('click', () => {
+            document.getElementById('restore-modal').classList.remove('active');
+        });
+        document.getElementById('btn-close-restore')?.addEventListener('click', () => {
+            document.getElementById('restore-modal').classList.remove('active');
+        });
+        document.getElementById('btn-modal-confirm')?.addEventListener('click', executeRestore);
+
+        // Auto Backups Modal
+        document.getElementById('btn-auto-backups')?.addEventListener('click', showAutoBackupsModal);
+        document.getElementById('btn-close-autobackup')?.addEventListener('click', () => {
+            document.getElementById('auto-backups-modal').classList.remove('active');
+        });
+
+        // Export PNG
+        document.getElementById('btn-export-png')?.addEventListener('click', exportPNGTable);
+        document.getElementById('btn-export-top3')?.addEventListener('click', exportPNGTop3);
+        document.getElementById('btn-export-mvp')?.addEventListener('click', exportPNGMVP);
+
+        // Import
+        const fileCsvInput = document.getElementById('input-file-csv');
+        const fileExcelInput = document.getElementById('input-file-excel');
+
+        document.getElementById('btn-import-csv')?.addEventListener('click', () => { fileCsvInput.value = ''; fileCsvInput.click(); });
+        document.getElementById('btn-import-excel')?.addEventListener('click', () => { fileExcelInput.value = ''; fileExcelInput.click(); });
+
+        fileCsvInput?.addEventListener('change', (e) => { if (e.target.files[0]) handleFileImport(e.target.files[0]); });
+        fileExcelInput?.addEventListener('change', (e) => { if (e.target.files[0]) handleFileImport(e.target.files[0]); });
+    }
+
+    function addNewTeam() {
+        if (teams.length >= 24) return alert('จำกัดจำนวนทีมสูงสุดไม่เกิน 24 ทีม');
+        teams.push(createNewTeamObject(`Team ${teams.length + 1}`));
+        calculateTotals();
+        sortTeams();
+        renderTable();
+        updateSummaryCards();
+        renderPlayerDashboard(); // [Player Dashboard v1]
+        saveToLocalStorage();
+        recordState();
+    }
+
+    function deleteTeam(teamId) {
+        if (teams.length <= 12) return alert('จำนวนทีมขั้นต่ำต้องไม่น้อยกว่า 12 ทีม');
+        if (confirm('คุณต้องการลบทีมนี้ใช่หรือไม่?')) {
+            teams = teams.filter(t => t.id !== teamId);
+            calculateTotals();
+            sortTeams();
+            renderTable();
+            updateSummaryCards();
+            renderPlayerDashboard(); // [Player Dashboard v1]
+            saveToLocalStorage();
+            recordState();
+        }
+    }
+
+    function resetAllData() {
+        if (confirm('คำเตือน: รีเซ็ตข้อมูลการแข่งขันทั้งหมด?')) {
+            teams = generateDefaultTeams();
+            // [v2.0 Dynamic Match] คง matchConfirmed ไว้ 12 ช่องเสมอ (ไม่ผูกกับ totalMatches) แม้ตอน reset
+            matchConfirmed = Array(12).fill(false);
+            calculateTotals();
+            sortTeams();
+            renderTable();
+            updateSummaryCards();
+            renderPlayerDashboard(); // [Player Dashboard v1]
+            saveToLocalStorage();
+            recordState();
+        }
+    }
+
+    // Export Excel
+    // [v2.0 Dynamic Match] export คอลัมน์ G1..GN ตามจำนวนเกมที่เลือกจริง (totalMatches) แทนค่าคงที่ 6 คอลัมน์
+    function exportToExcel() {
+        const exportData = teams.map((t, idx) => {
+            const row = {
+                "อันดับ": idx + 1,
+                "ชื่อทีม": t.name,
+                "โลโก้ (DataURL/Status)": t.logo ? 'มีโลโก้' : 'ไม่มี'
+            };
+
+            for (let i = 0; i < totalMatches; i++) {
+                const g = t.games[i] || { placement: 0, kill: 0 };
+                // [v2.0.2 Direct-Points] g.placement คือแต้มที่กรอกตรงๆ อยู่แล้ว ไม่ต้องแปลงผ่านตารางอีกต่อไป
+                row[`G${i+1} Place Score`] = g.placement;
+                row[`G${i+1} Kill`] = g.kill;
+            }
+
+            row["Booyah Count"] = t.booyahCount;
+            row["Top 3 Count"] = t.top3Count;
+            row["Top 5 Count"] = t.top5Count;
+            row["Avg Rank"] = t.avgRank.toFixed(2);
+            row["Avg Kill"] = t.avgKill.toFixed(2);
+            row["Placement Score รวม"] = t.totalPlace;
+            row["Kill รวม"] = t.totalKill;
+            row["คะแนนรวม"] = t.totalScore;
+            return row;
+        });
+
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Leaderboard");
+        XLSX.writeFile(wb, "FreeFire_BR_Leaderboard_Full.xlsx");
+    }
+</script>
+
+</body>
+</html>
